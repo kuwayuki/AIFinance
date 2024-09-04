@@ -1,0 +1,11 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+history/
+__pycache__/
+config.json
+
+# Expo
+.expo/
+dist/
+web-build/

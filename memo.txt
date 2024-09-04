@@ -1,0 +1,57 @@
+これから下がるので売り時か、安定後買い時か
+
+CVX,CAT,PEP,KO,BAC,GS,MS,JNJ,MRK,AAPL,TSMC,NVDA,INTC,AVGO,GOOGL,MSFT,META,BABA,IBM,ORCL,VZ
+ASML,LRCX,MCHP,ON,SWKS,CTSH,BIDU,NTES,WIT,EBAY,ABNB,EA,ZM,IQ,TME,AKAM,GEN,FFIV,DBX,CHKP,ZI,BOX,FIS,STNE,FUTU,
+
+
+CAT,PEP,KO,JNJ,AAPL,NVDA,AVGO,GOOGL,MSFT,META,ORCL
+ASML,LRCX,MCHP,ON,NTES,EBAY,ZM,FFIV,CHKP,BOX,STNE,FUTU
+
+NTES,LRCX
+
+* 月初めにシート企業は全てやりたい
+* 各週で優良企業は全てやりたい
+* 売買間近は月～金でやりたい
+
+
+
+
+
+
+
+
+
+
+
+1. 投資家情報 (Investor Relations)
+重点ページ: 投資家情報 (Investor Relations) ページ
+確認すべき情報:
+財務報告書 (Financial Reports): 年次報告書（Annual Reports）、四半期報告書（Quarterly Reports）など。企業の業績や財務状況を詳細に確認できます。
+決算発表 (Earnings Releases): 最近の決算発表や将来の決算予定。業績予測や株主へのメッセージを確認できます。
+株主総会資料 (Shareholder Meeting Materials): 過去の株主総会の議事録や資料。経営陣の方針や戦略を理解できます。
+2. ニュース・プレスリリース (News and Press Releases)
+重点ページ: ニュースまたはプレスリリース (News/Press Releases) ページ
+確認すべき情報:
+新製品・サービスの発表: 新製品のリリースや新規事業の発表が企業の成長ポテンシャルを示すことがあります。
+提携・買収: 他社との提携や買収活動に関する情報は、企業の戦略的方向性を把握するのに役立ちます。
+法的問題やリスク情報: 訴訟や規制上のリスクについての最新情報も重要です。
+3. 経営陣・ガバナンス (Management and Governance)
+重点ページ: 経営陣またはガバナンス (Management/Governance) ページ
+確認すべき情報:
+経営陣のプロフィール: CEOや取締役などの経営陣の経歴や経験を確認し、企業のリーダーシップの質を評価します。
+ガバナンス構造: 企業のガバナンス（企業統治）の方針や仕組みを理解し、長期的な企業の安定性を評価します。
+4. 企業概要・ビジョン (About Us/Company Overview)
+重点ページ: 企業概要またはビジョン (About Us/Company Overview) ページ
+確認すべき情報:
+企業の使命とビジョン: 企業の基本理念や目標を確認し、自分の投資理念に合っているかを判断します。
+歴史・実績: 企業の歴史やこれまでの実績を確認し、長期的な成長の可能性を見極めます。
+5. 製品・サービス (Products and Services)
+重点ページ: 製品やサービスのページ
+確認すべき情報:
+主要製品と市場シェア: 企業の主要製品やサービスのラインナップ、市場シェアなどを把握します。特に、売上の大部分を占める主力製品が安定しているかを確認します。
+イノベーションと研究開発: 新技術の採用や研究開発活動が進行中かどうかを確認し、企業の将来性を評価します。
+6. ESG（環境・社会・ガバナンス）
+重点ページ: ESGまたは持続可能性 (Sustainability) ページ
+確認すべき情報:
+環境対策: 企業が環境にどのような対策を講じているかを確認し、長期的なリスク管理能力を評価します。
+社会貢献と企業倫理: 社会的な責任や倫理観に基づいた活動を行っているかを確認します。特に、投資家として企業の社会的信用を重視する場合は重要です。
