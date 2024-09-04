@@ -361,6 +361,9 @@ def load_news_cache():
 def load_history_data(ticker, is_force = False):
     date_str = datetime.now().strftime('%Y%m%d')
     folder_path = f'./history/{date_str}/{ticker}'
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
     file_path = os.path.join(folder_path, 'etf.csv')
 
     # ETFデータを保存（ファイルが存在しない場合のみ）
@@ -474,10 +477,9 @@ def read_news_from_csv(file_path, encoding='utf-8', ticker=None):
     return "\n".join(news_list)
 
 def future(ticker, is_include_history_data = False):
-    historical_data = load_history_data(ticker)
-
     historical_section = ""
     if is_include_history_data:
+        historical_data = load_history_data(ticker, False)
         historical_section += f"\n過去{HISTORY_DAYS}日間のデータも考慮していますが、直近1ヶ月のデータには特に注目しています。"
         historical_section += f"\n{historical_data.to_string(index=False)}"
 
