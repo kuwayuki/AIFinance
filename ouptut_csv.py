@@ -4,8 +4,9 @@ import sys
 from datetime import datetime
 
 # DEFAULT = ["CAT"]
+DEFAULT = ["CVX","CAT","PEP","KO","BAC","GS","MS","JNJ","MRK","AAPL","NVDA","INTC","AVGO","GOOGL","MSFT","META","BABA","IBM","ORCL","VZ","ASML","LRCX","MCHP","ON","SWKS","CTSH","BIDU","NTES","WIT","EBAY","ABNB","EA","ZM","IQ","TME","AKAM","GEN","FFIV","DBX","CHKP","ZI","BOX","FIS","STNE","FUTU"]
 # DEFAULT = ["CVX","CAT","PEP","KO","BAC","GS","MS","JNJ","MRK","AAPL","NVDA","INTC","AVGO","GOOGL","MSFT","META","BABA","IBM","ORCL","VZ"]
-DEFAULT = ["ASML","LRCX","MCHP","ON","SWKS","CTSH","BIDU","NTES","WIT","EBAY","ABNB","EA","ZM","IQ","TME","AKAM","GEN","FFIV","DBX","CHKP","ZI","BOX","FIS","STNE","FUTU"]
+# DEFAULT = ["ASML","LRCX","MCHP","ON","SWKS","CTSH","BIDU","NTES","WIT","EBAY","ABNB","EA","ZM","IQ","TME","AKAM","GEN","FFIV","DBX","CHKP","ZI","BOX","FIS","STNE","FUTU"]
 tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else DEFAULT
 
 def format_percentage(value):
@@ -118,7 +119,7 @@ def save_etf_data(ticker, file_path):
     current_price = format_decimal(etf.history(period="1d")['Close'].iloc[-1])  # 現在の株価
 
     # ニュースリストを";"で区切って連結し、カンマを別の文字（例えば、スペースや「|」）に置換
-    news_str = ";".join([news_item['title'].replace(",", " ").replace("—", "-").replace("\xa0", " ").replace("\xae", " ") for news_item in etf.news])
+    news_str = ";".join([news_item['title'].replace(",", " ").replace("—", "-").replace("\xa0", " ").replace("\xae", " ").replace("\u2122", " ") for news_item in etf.news])
 
     # CSV ファイルが存在しない場合はヘッダーを追加して新規作成
     if not os.path.exists(file_path):
