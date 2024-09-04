@@ -4,6 +4,7 @@
 history/
 __pycache__/
 config.json
+*.csv
 
 # Expo
 .expo/
