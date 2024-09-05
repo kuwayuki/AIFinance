@@ -5,6 +5,7 @@ history/
 __pycache__/
 config.json
 *.csv
+aifinance_custom.bat
 
 # Expo
 .expo/
