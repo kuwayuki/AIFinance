@@ -119,7 +119,7 @@ def save_etf_data(ticker, file_path):
     current_price = format_decimal(etf.history(period="1d")['Close'].iloc[-1])  # 現在の株価
 
     # ニュースリストを";"で区切って連結し、カンマを別の文字（例えば、スペースや「|」）に置換
-    news_str = ";".join([news_item['title'].replace(",", " ").replace("—", "-").replace("\xa0", " ").replace("\xae", " ").replace("\u2122", " ") for news_item in etf.news])
+    news_str = ";".join([news_item['title'].replace(",", " ").replace("—", "-").replace("\xa0", " ").replace("\xae", " ").replace("\u014c", " ").replace("\u2122", " ").replace('\u02bb', " ") for news_item in etf.news])
 
     # CSV ファイルが存在しない場合はヘッダーを追加して新規作成
     if not os.path.exists(file_path):
