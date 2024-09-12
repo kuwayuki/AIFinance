@@ -525,7 +525,7 @@ if __name__ == "__main__":
         if is_future:
             # python main.py "NVDA" "FUTURE"
             ouptut_csv.main(ticker)
-            # future(ticker, False)
+            future(ticker, False)
             # 過去データも含める場合
             # future(ticker, True)
         else:
