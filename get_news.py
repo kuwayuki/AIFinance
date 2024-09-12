@@ -71,9 +71,29 @@ def fetch_news_titles(soup):
     return news_data
 
 def append_to_csv(file_name, news_data):
-    with open(file_name, 'a', newline='', encoding='utf-8') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerows(news_data)
+    # 既存のCSVファイルの内容をリストとして読み込む
+    existing_data = []
+    try:
+        with open(file_name, 'r', encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile)
+            existing_data = list(reader)  # 既存の行を全てリストとして格納
+    except FileNotFoundError:
+        pass  # ファイルが存在しない場合はスキップ
+
+    # 新しいデータが既に存在するかチェック
+    new_data_to_add = []
+    for row in news_data:
+        if row not in existing_data:  # 新しいデータが既存データに無い場合のみ追加
+            new_data_to_add.append(row)
+
+    # 新しいデータを追記モードでCSVに書き込む
+    if new_data_to_add:
+        with open(file_name, 'a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerows(new_data_to_add)
+        print(f"{len(new_data_to_add)} 件の新しいデータを追加しました。")
+    else:
+        print("新しいデータはありません。")
 
 def generate_date_ranges(start_date, end_date):
     # 隔月で日付範囲を生成する
