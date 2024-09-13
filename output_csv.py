@@ -223,17 +223,17 @@ def save_etf_data(ticker, file_path):
     current_price = format_decimal(etf.history(period="1d")['Close'].iloc[-1])  # 現在の株価
 
     # ニュースリストを";"で区切って連結し、カンマを別の文字（例えば、スペースや「|」）に置換
-    news_str = ";".join([news_item['title'].replace(",", " ").replace("—", "-").replace("\xa0", " ").replace("\xae", " ").replace("\u014c", " ").replace("\u2122", " ").replace('\u02bb', " ") for news_item in etf.news])
+    news_str = ";".join([news_item['title'].replace(",", " ").replace("—", "-").replace("\u2013", " ").replace("\xa0", " ").replace("\xae", " ").replace("\u014c", " ").replace("\u2122", " ").replace('\u02bb', " ") for news_item in etf.news])
 
     # CSV ファイルが存在しない場合はヘッダーを追加して新規作成
     if not os.path.exists(file_path):
-        with open(file_path, 'w', encoding='shift_jis') as f:
+        with open(file_path, 'w', encoding='shift_jis', errors='replace') as f:
             f.write("Ticker,利益率(2期前),利益率(1期前),利益率(今年),実績PER,予想PER,ROE,売上高(2期前),売上高(1期前),現在の株価,"
                     "最高値(2期前),最安値(2期前),最高値(1期前),最安値(1期前),最高値(今年),最安値(今年),ニュース,企業URL, アナリスト評価\n")
                     # "フリーキャッシュフロー,負債比率\n")
     
     # データを追記
-    with open(file_path, 'a', encoding='shift_jis') as f:
+    with open(file_path, 'a', encoding='shift_jis', errors='replace') as f:
         f.write(f"{ticker},{profit_margins['profit_margin_2y_ago']},{profit_margins['profit_margin_1y_ago']},"
                 f"{profit_margins['profit_margin_current']},{trailing_per},{per},{roe},"
                 f"{profit_margins['revenue_2y_ago']},{profit_margins['revenue_1y_ago']},{current_price},"
