@@ -14,7 +14,7 @@ from newsapi import NewsApiClient
 import csv
 import sys
 import get_news
-import ouptut_csv
+import output_csv
 # プロンプトをインポート
 from prompts import PROMPT_BASE_ALL, PROMPT_BASE_DETAIL, PROMPT_BASE_SHORT, PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT, PROMPT_BASE_PROMISING,PROMPT_PROMISING_FUTURE
 # import fredapi
@@ -524,7 +524,7 @@ if __name__ == "__main__":
     for ticker in tickers:
         if is_future:
             # python main.py "NVDA" "FUTURE"
-            ouptut_csv.main(ticker)
+            output_csv.main(ticker)
             future(ticker, False)
             # 過去データも含める場合
             # future(ticker, True)

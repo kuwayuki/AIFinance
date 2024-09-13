@@ -2,6 +2,9 @@ import yfinance as yf
 import os
 import sys
 from datetime import datetime
+import pandas as pd
+import json
+# https://qiita.com/aguilarklyno/items/51622f9efc33aac88bbf
 
 # DEFAULT = ["CAT"]
 DEFAULT = ["CVX","CAT","PEP","KO","BAC","GS","MS","JNJ","MRK","AAPL","NVDA","INTC","AVGO","GOOGL","MSFT","META","BABA","IBM","ORCL","VZ","ASML","LRCX","MCHP","ON","SWKS","CTSH","BIDU","NTES","WIT","EBAY","ABNB","EA","ZM","IQ","TME","AKAM","GEN","FFIV","DBX","CHKP","ZI","BOX","FIS","STNE","FUTU"]
@@ -97,6 +100,100 @@ def calculate_profit_margins(ticker):
             "revenue_current": "N/A"
         }
 
+def filter_cashflow_for_forecasting(cashflow_data):
+    """
+    キャッシュフローデータから未来予測に必要な項目だけを抽出する。
+    """
+    # 未来予測に重要と考えられる項目のみ保持
+    keys_to_keep = ['Free Cash Flow', 'Operating Cash Flow', 'Net Income From Continuing Operations', 'Capital Expenditure']
+    
+    # キャッシュフローデータをフィルタリング
+    filtered_cashflow = {}
+    for date, values in cashflow_data.items():
+        filtered_values = {key: values[key] for key in keys_to_keep if key in values}
+        filtered_cashflow[date] = filtered_values
+    
+    return filtered_cashflow
+
+def get_free_cash_flow_json(ticker):
+    """フリーキャッシュフローをJSON形式で取得して、CSVの1セルに保存"""
+    etf = yf.Ticker(ticker)
+    try:
+        cashflow = etf.cashflow
+        if cashflow is not None:
+            # DataFrameをJSON形式に変換して辞書に変換
+            cashflow_dict = json.loads(cashflow.to_json())
+            
+            # フィルタリング関数を適用
+            filtered_cashflow_dict = filter_cashflow_for_forecasting(cashflow_dict)
+            
+            # 辞書をJSON文字列に変換
+            cashflow_json = json.dumps(filtered_cashflow_dict)
+            
+            # カンマや不要な文字を置換
+            cashflow_json_cleaned = cashflow_json.replace(",", " ").replace("—", "-").replace("\xa0", " ")
+            
+            return cashflow_json_cleaned
+
+        else:
+            return "N/A"
+    except Exception as e:
+        print(f"Error retrieving cash flow for {ticker}: {e}")
+        return "N/A"
+
+def get_debt_to_equity_json(ticker):
+    """負債比率を計算し、JSON形式で必要なデータをCSV用に整形"""
+    etf = yf.Ticker(ticker)
+    try:
+        balance_sheet = etf.balance_sheet
+        if balance_sheet is not None:
+            # 必要なデータが存在するかを確認して取得
+            total_debt = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else None
+            total_equity = balance_sheet.loc['Total Stockholder Equity'].iloc[0] if 'Total Stockholder Equity' in balance_sheet.index else None
+            net_debt = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else None
+
+            # データを辞書に変換
+            balance_sheet_data = {
+                "Total Debt": total_debt,
+                "Total Stockholder Equity": total_equity,
+                "Net Debt": net_debt
+            }
+
+            # 辞書をJSON文字列に変換
+            balance_sheet_json = json.dumps(balance_sheet_data)
+
+            # カンマや不要な文字を置換して、CSVに書き込むために整形
+            balance_sheet_json_cleaned = balance_sheet_json.replace(",", " ").replace("—", "-").replace("\xa0", " ")
+
+            return balance_sheet_json_cleaned
+        else:
+            return "N/A"
+    except Exception as e:
+        print(f"Error retrieving balance sheet for {ticker}: {e}")
+        return "N/A"
+
+def clean_json(data):
+    if isinstance(data, pd.DataFrame):
+        # DataFrameを辞書に変換してからJSONに変換
+        data = data.to_dict(orient='records')
+    # JSON形式に変換し、カンマを全角カンマに、改行や特殊文字を削除
+    recommendations_str = json.dumps(data).replace(',', ';').replace('\n', '').replace('\r', '')
+    return recommendations_str
+
+# 再帰的にデータをJSONシリアライズ可能な形式に変換する関数
+def convert_to_serializable(data):
+    if isinstance(data, pd.DataFrame):
+        return {str(k): convert_to_serializable(v) for k, v in data.to_dict().items()}  # DataFrameのキーと値を再帰的に変換
+    elif isinstance(data, pd.Series):
+        return {str(k): convert_to_serializable(v) for k, v in data.to_dict().items()}  # Seriesのキーと値を再帰的に変換
+    elif isinstance(data, pd.Timestamp):
+        return data.isoformat()  # TimestampをISOフォーマットの文字列に変換
+    elif isinstance(data, dict):
+        return {str(k): convert_to_serializable(v) for k, v in data.items()}  # 辞書のキーと値を再帰的に変換
+    elif isinstance(data, list):
+        return [convert_to_serializable(item) for item in data]  # リストの要素を再帰的に変換
+    return data  # それ以外のデータ型はそのまま返す
+
 def save_etf_data(ticker, file_path):
     etf = yf.Ticker(ticker)
     
@@ -105,6 +202,13 @@ def save_etf_data(ticker, file_path):
 
     # 利益率と売上高のデータを取得
     profit_margins = calculate_profit_margins(ticker)
+
+    # フリーキャッシュフローと負債比率を取得
+    # free_cash_flow = get_free_cash_flow_json(ticker)
+    # debt_to_equity_ratio = get_debt_to_equity_json(ticker)
+    recommendations_summary = etf.recommendations_summary
+    print(recommendations_summary)
+    recommendations_summary = clean_json(recommendations_summary)
 
     # 過去2年分と今年の最高値・最安値を現在の年から取得
     high_low_2y_ago = get_yearly_high_low(ticker, current_year - 2)
@@ -125,7 +229,8 @@ def save_etf_data(ticker, file_path):
     if not os.path.exists(file_path):
         with open(file_path, 'w', encoding='shift_jis') as f:
             f.write("Ticker,利益率(2期前),利益率(1期前),利益率(今年),実績PER,予想PER,ROE,売上高(2期前),売上高(1期前),現在の株価,"
-                    "最高値(2期前),最安値(2期前),最高値(1期前),最安値(1期前),最高値(今年),最安値(今年),ニュース,企業URL\n")
+                    "最高値(2期前),最安値(2期前),最高値(1期前),最安値(1期前),最高値(今年),最安値(今年),ニュース,企業URL, アナリスト評価\n")
+                    # "フリーキャッシュフロー,負債比率\n")
     
     # データを追記
     with open(file_path, 'a', encoding='shift_jis') as f:
@@ -134,7 +239,9 @@ def save_etf_data(ticker, file_path):
                 f"{profit_margins['revenue_2y_ago']},{profit_margins['revenue_1y_ago']},{current_price},"
                 f"{high_low_2y_ago['yearly_high']},{high_low_2y_ago['yearly_low']},"
                 f"{high_low_1y_ago['yearly_high']},{high_low_1y_ago['yearly_low']},"
-                f"{high_low_current['yearly_high']},{high_low_current['yearly_low']},{news_str},{website}\n")
+                f"{high_low_current['yearly_high']},{high_low_current['yearly_low']},"
+                f"{news_str},{website}, {recommendations_summary} \n")
+                # f"{news_str},{website},{free_cash_flow},{debt_to_equity_ratio}\n")
 
 # メイン処理
 def main(ticker):

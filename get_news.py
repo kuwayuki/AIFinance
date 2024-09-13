@@ -187,7 +187,6 @@ def get_ai_opinion(prompt):
         temperature=0.1
     )
 
-    print(response.usage)
     return response.choices[0].message.content
 
 if __name__ == "__main__":
