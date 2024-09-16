@@ -16,7 +16,7 @@ import sys
 import get_news
 import output_csv
 # プロンプトをインポート
-from prompts import PROMPT_BASE_ALL, PROMPT_BASE_DETAIL, PROMPT_BASE_SHORT, PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT, PROMPT_BASE_PROMISING,PROMPT_PROMISING_FUTURE
+from prompts import PROMPT_PROMISING_GROW, PROMPT_BASE_ALL, PROMPT_BASE_DETAIL, PROMPT_BASE_SHORT, PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT, PROMPT_BASE_PROMISING,PROMPT_PROMISING_FUTURE
 # import fredapi
 
 # https://developer.ft.com/portal/docs-start-commence-making-requests
@@ -200,6 +200,7 @@ def load_etf_data(file_path):
 
 # AIの意見を取得
 def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE):
+    # print(prompt)
     response = openai.chat.completions.create(
         model=GPT_MODEL,
         messages=[
@@ -462,11 +463,16 @@ def read_news_from_csv(file_path, encoding='utf-8', ticker=None):
             reader = list(csv.reader(file))  # 全行をリストとして読み込む
             headers = ",".join(reader[0])  # ヘッダー行を文字列として結合
             if ticker:
-                for row in reversed(reader[1:]):  # データ行を逆順に処理
-                    if row[0] == ticker:  # 最初の列がティッカーと一致するかチェック
+                if ticker == "ALL":
+                    for row in reversed(reader[1:]):  # データ行を逆順に処理
                         news_content = ",".join(row)  # 行全体を連結
                         news_list.append(f"{headers}\n{news_content}")
-                        break  # 一致するティッカーが見つかったら終了
+                else:
+                    for row in reversed(reader[1:]):  # データ行を逆順に処理
+                        if row[0] == ticker:  # 最初の列がティッカーと一致するかチェック
+                            news_content = ",".join(row)  # 行全体を連結
+                            news_list.append(f"{headers}\n{news_content}")
+                            break  # 一致するティッカーが見つかったら終了
             else:
                 for row in reader[1:]:
                     # 各行のデータを適切に処理し、リストに追加
@@ -477,22 +483,33 @@ def read_news_from_csv(file_path, encoding='utf-8', ticker=None):
         print(f"Error reading CSV file: {e}")
     return "\n".join(news_list)
 
-def future(ticker, is_include_history_data = False):
+def future(ticker, is_include_history_data = False, is_grow = False, file_path = os.path.join(f'./', 'research.csv')):
     historical_section = ""
     if is_include_history_data:
         historical_data = load_history_data(ticker, False)
         historical_section += f"\n過去{HISTORY_DAYS}日間のデータも考慮していますが、直近1ヶ月のデータには特に注目しています。"
         historical_section += f"\n{historical_data.to_string(index=False)}"
 
-    prompt = PROMPT_PROMISING_FUTURE.format(
+    prompt_base = PROMPT_PROMISING_FUTURE
+    prompt_system = PROMPT_SYSTEM_BASE
+    if is_grow:
+        prompt_base = PROMPT_PROMISING_GROW
+        prompt_system = PROMPT_SYSTEM_BASE
+
+    csv_ticer = ticker
+    if is_grow:
+        csv_ticer = "ALL"
+        
+    prompt = prompt_base.format(
         ticker=ticker,
         historical_section=historical_section,
         current_date=datetime.now(),
         news=read_news_from_csv('./news_data.csv'),
-        research=read_news_from_csv('./research.csv', 'shift_jis', ticker),
+        research=read_news_from_csv(file_path, 'shift_jis', csv_ticer),
     )
-
-    ai_opinion = get_ai_opinion(prompt)
+    print(prompt)
+    # return prompt
+    ai_opinion = get_ai_opinion(prompt, prompt_system)
     ai_opinion_cleaned = re.sub(r'[\*\#\_]+', '', ai_opinion)
     send_line_notify(ai_opinion_cleaned)
 
@@ -510,7 +527,10 @@ def future(ticker, is_include_history_data = False):
 # 複数のティッカーに対してループ処理
 if __name__ == "__main__":
     is_future = sys.argv[2] == "FUTURE" if len(sys.argv) > 2 else False 
-    if not is_future:
+    is_grow = sys.argv[2] == "GROW" if len(sys.argv) > 2 else False 
+    if is_future or is_grow:
+        get_news.main(use_latest_csv_date=True)
+    else:
         # Google News
         soup = fetch_news_soup(NEWS_URL)
         news_headlines = fetch_news_titles(soup, True)
@@ -518,17 +538,25 @@ if __name__ == "__main__":
         news_all_relations = get_news_all_relations(soup)
         # yahoo_headlines = fetch_news_titles(soup, "Yahoo!ファイナンス")
         print(news_all_relations)
-    else:
-        get_news.main(use_latest_csv_date=True)
 
-    for ticker in tickers:
-        if is_future:
-            # python main.py "NVDA" "FUTURE"
-            output_csv.main(ticker)
-            future(ticker, False)
-            # 過去データも含める場合
-            # future(ticker, True)
-        else:
-            # python main.py "NVDA"
-            main(ticker, news_all_relations, IS_SHORT_CONTINUE_DETAIL)
-        # main(ticker)import yfinance as yf
+    if is_grow:
+        date_str = datetime.now().strftime('%Y%m%d')
+        tickers_str = ','.join(tickers)
+        folder_path = f'./history/{date_str}/{tickers_str}'
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        file_path = os.path.join(folder_path, 'research.csv')
+        output_csv.mains(tickers, file_path)
+        future(tickers_str, False, True, file_path)
+    else:
+        for ticker in tickers:
+            if is_future:
+                # python main.py "NVDA" "FUTURE"
+                output_csv.main(ticker)
+                future(ticker, False)
+                # 過去データも含める場合
+                # future(ticker, True)
+            else:
+                # python main.py "NVDA"
+                main(ticker, news_all_relations, IS_SHORT_CONTINUE_DETAIL)
+            # main(ticker)import yfinance as yf
