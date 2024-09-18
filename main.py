@@ -16,7 +16,7 @@ import sys
 import get_news
 import output_csv
 # プロンプトをインポート
-from prompts import PROMPT_PROMISING_GROW, PROMPT_BASE_ALL, PROMPT_BASE_DETAIL, PROMPT_BASE_SHORT, PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT, PROMPT_BASE_PROMISING,PROMPT_PROMISING_FUTURE
+from prompts import PROMPT_PROMISING_GROW, PROMPT_BASE_ALL, PROMPT_BASE_DETAIL, PROMPT_BASE_SHORT, PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT, PROMPT_BASE_PROMISING,PROMPT_PROMISING_FUTURE, PROMPT_SYSTEM_GROW
 # import fredapi
 
 # https://developer.ft.com/portal/docs-start-commence-making-requests
@@ -204,8 +204,8 @@ def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE):
     response = openai.chat.completions.create(
         model=GPT_MODEL,
         messages=[
-            {"role": "user", "content": prompt},
-            {"role": "system", "content": prompt_system}
+            {"role": "system", "content": prompt_system},
+            {"role": "user", "content": prompt}
         ],
         temperature=0.01
     )
@@ -464,9 +464,11 @@ def read_news_from_csv(file_path, encoding='utf-8', ticker=None):
             headers = ",".join(reader[0])  # ヘッダー行を文字列として結合
             if ticker:
                 if ticker == "ALL":
+                    # ヘッダーを一度だけ追加
+                    news_list.append(headers)
                     for row in reversed(reader[1:]):  # データ行を逆順に処理
                         news_content = ",".join(row)  # 行全体を連結
-                        news_list.append(f"{headers}\n{news_content}")
+                        news_list.append(news_content)
                 else:
                     for row in reversed(reader[1:]):  # データ行を逆順に処理
                         if row[0] == ticker:  # 最初の列がティッカーと一致するかチェック
@@ -494,7 +496,7 @@ def future(ticker, is_include_history_data = False, is_grow = False, file_path =
     prompt_system = PROMPT_SYSTEM_BASE
     if is_grow:
         prompt_base = PROMPT_PROMISING_GROW
-        prompt_system = PROMPT_SYSTEM_BASE
+        prompt_system = PROMPT_SYSTEM_GROW
 
     csv_ticer = ticker
     if is_grow:
