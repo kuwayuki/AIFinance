@@ -569,11 +569,11 @@ def save_etf_data(ticker, file_path, include_canslim_data=False, include_investm
     print(f"{file_path} にデータを出力しました。")
 
 # メイン処理
-def mains(tickers, file_path = os.path.join(f'./', 'research.csv')):
+def mains(tickers, file_path = os.path.join(f'./csv/', 'research.csv')):
     for ticker in tickers:
         main(ticker, file_path)
 
-def main(ticker, file_path = os.path.join(f'./', 'research.csv')):
+def main(ticker, file_path = os.path.join(f'./csv/', 'research.csv')):
     # CAN-SLIMデータと投資指標データを追加する場合は引数をTrueにする
     save_etf_data(ticker, file_path, include_canslim_data=True, include_investment_scores=True)
 

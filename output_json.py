@@ -106,7 +106,7 @@ def save_etf_json_data(ticker, file_path):
 
 # メイン処理
 def main(ticker):
-    folder_path = f'./'
+    folder_path = f'./csv/'
     # file_path = os.path.join(folder_path, 'research.csv')
     # save_etf_data(ticker, file_path)
     file_path = os.path.join(folder_path, 'research.json')

@@ -123,13 +123,46 @@ def read_news_from_csv(file_path, encoding='utf-8'):
         print(f"Error reading CSV file: {e}")
     return "\n".join(news_list), latest_date
 
+# 何年前のデータを削除するか指定できる関数
+def remove_old_news(file_name, days_ago=365 * 3):
+    current_date = datetime.now()
+    cutoff_date = current_date - timedelta(days=days_ago)
+    
+    # 新しいデータを格納するリスト
+    updated_data = []
+
+    try:
+        # 既存のCSVファイルを読み込む
+        with open(file_name, 'r', encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                news_date = row[0]  # 最初の列が日付
+                try:
+                    news_date_obj = datetime.strptime(news_date, '%Y-%m-%d')
+                    # 日付が指定された年数以内であれば、データを保持
+                    if news_date_obj >= cutoff_date:
+                        updated_data.append(row)
+                except ValueError:
+                    print(f"日付フォーマットが不正です: {news_date}")
+
+        # 古いデータを削除した新しいCSVファイルを書き込む
+        with open(file_name, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerows(updated_data)
+        
+        print(f"{len(updated_data)} 件のデータを保持しました。古いデータは削除されました。")
+
+    except FileNotFoundError:
+        print(f"{file_name}が見つかりませんでした。")
+
 def main(use_latest_csv_date=False):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=365*3)
+    csv_path = './csv/news_data.csv'
 
     # 最新日付を使うオプションが有効な場合、CSVから最新の日付を取得
     if use_latest_csv_date:
-        _, latest_date = read_news_from_csv('news_data.csv')
+        _, latest_date = read_news_from_csv(csv_path)
         if latest_date:
             start_date = datetime.strptime(latest_date, '%Y-%m-%d')
 
@@ -152,7 +185,7 @@ def main(use_latest_csv_date=False):
 
         news_data = get_new_york(url)
         # news_data = fetch_news_titles(soup)
-        append_to_csv('news_data.csv', news_data)
+        append_to_csv(csv_path, news_data)
         # 次の処理があるか確認してtime.sleep(10)を実行
         if (start, end) != date_ranges[-1]:
             time.sleep(10)
@@ -160,11 +193,11 @@ def main(use_latest_csv_date=False):
         # if soup:
         #     news_data = get_new_york(soup)
         #     # news_data = fetch_news_titles(soup)
-        #     append_to_csv('news_data.csv', news_data)
+        #     append_to_csv(csv_path, news_data)
 
     if IS_COMPACT_AI:
         # プロンプトの生成
-        all_news_data, _ = read_news_from_csv('news_data.csv')
+        all_news_data, _ = read_news_from_csv(csv_path)
         prompt = PROMPT_CSV_TO_COMPACT + all_news_data
         ai_opinion = get_ai_opinion(prompt)
 
@@ -176,6 +209,9 @@ def main(use_latest_csv_date=False):
             writer = csv.writer(csvfile)
             writer.writerow(['AI Opinion'])  # ヘッダー
             writer.writerow([ai_opinion_cleaned])  # 内容
+
+    # 古いデータは削除
+    remove_old_news(csv_path)
 
 # AIの意見を取得
 def get_ai_opinion(prompt):

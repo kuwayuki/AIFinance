@@ -201,15 +201,17 @@ def load_etf_data(file_path):
 # AIの意見を取得
 def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE):
     # print(prompt)
-    response = openai.chat.completions.create(
-        model=GPT_MODEL,
-        messages=[
-            {"role": "system", "content": prompt_system},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.01
-    )
 
+    # gpt-4o-2024-08-06 or o1-preview
+    if GPT_MODEL != "o1-preview":
+        response = openai.chat.completions.create(
+            model=GPT_MODEL,
+            messages=[{"role": "system", "content": prompt_system}, {"role": "user", "content": prompt}],
+            temperature=0.01)
+    else:
+        response = openai.chat.completions.create(
+            model=GPT_MODEL,
+            messages=[{"role": "user", "content": prompt}])
     print(response.usage)
     return response.choices[0].message.content
 
@@ -485,7 +487,7 @@ def read_news_from_csv(file_path, encoding='utf-8', ticker=None):
         print(f"Error reading CSV file: {e}")
     return "\n".join(news_list)
 
-def future(ticker, is_include_history_data = False, is_grow = False, file_path = os.path.join(f'./', 'research.csv')):
+def future(ticker, is_include_history_data = False, is_grow = False, file_path = os.path.join(f'./csv/', 'research.csv')):
     historical_section = ""
     if is_include_history_data:
         historical_data = load_history_data(ticker, False)
@@ -506,7 +508,7 @@ def future(ticker, is_include_history_data = False, is_grow = False, file_path =
         ticker=ticker,
         historical_section=historical_section,
         current_date=datetime.now(),
-        news=read_news_from_csv('./news_data.csv'),
+        news=read_news_from_csv('./csv/news_data.csv'),
         research=read_news_from_csv(file_path, 'shift_jis', csv_ticer),
     )
     print(prompt)
