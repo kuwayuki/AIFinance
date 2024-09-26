@@ -5,11 +5,8 @@ from datetime import datetime, timedelta
 import re
 import pytz
 import time
-from prompts import PROMPT_CSV_TO_COMPACT
-import openai
-from main import API_KEY
-openai.api_key = API_KEY
-GPT_MODEL = "gpt-4o"
+from prompts import PROMPT_CSV_TO_COMPACT, PROMPT_CSV_TO_COMPACT_SYSTEM
+import main as mainCode
 
 API_KEY = 'WMvFsMAutRouFV1iWzvyDmBfTRqjKKVu'  # ここにAPIキーを入力してください
 IS_COMPACT_AI = False
@@ -199,7 +196,7 @@ def main(use_latest_csv_date=False):
         # プロンプトの生成
         all_news_data, _ = read_news_from_csv(csv_path)
         prompt = PROMPT_CSV_TO_COMPACT + all_news_data
-        ai_opinion = get_ai_opinion(prompt)
+        ai_opinion = mainCode.get_ai_opinion(prompt, PROMPT_CSV_TO_COMPACT_SYSTEM)
 
         print(ai_opinion)
         ai_opinion_cleaned = re.sub(r'[\*\#\_]+', '', ai_opinion)
@@ -212,18 +209,6 @@ def main(use_latest_csv_date=False):
 
     # 古いデータは削除
     remove_old_news(csv_path)
-
-# AIの意見を取得
-def get_ai_opinion(prompt):
-    response = openai.chat.completions.create(
-        model=GPT_MODEL,
-        messages=[
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.1
-    )
-
-    return response.choices[0].message.content
 
 if __name__ == "__main__":
     main(use_latest_csv_date=True)
