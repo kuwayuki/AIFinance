@@ -121,7 +121,7 @@ def read_news_from_csv(file_path, encoding='utf-8'):
     return "\n".join(news_list), latest_date
 
 # 何年前のデータを削除するか指定できる関数
-def remove_old_news(file_name, days_ago=365 * 3):
+def remove_old_news(file_name, days_ago=365 * 2):
     current_date = datetime.now()
     cutoff_date = current_date - timedelta(days=days_ago)
     
@@ -152,6 +152,21 @@ def remove_old_news(file_name, days_ago=365 * 3):
     except FileNotFoundError:
         print(f"{file_name}が見つかりませんでした。")
 
+def fetch_google_news():
+    full_url = "https://news.google.com/news/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en"
+    soup = fetch_news_soup(full_url)
+    if soup:
+        news_data = fetch_news_titles(soup)
+
+        # 日付フォーマットとニュース形式を変換
+        formatted_news_data = []
+        for item in news_data:
+            date = item[0].split(' ')[0].replace('/', '-')  # 日付部分を「YYYY-MM-DD」形式に変換
+            news = item[1].split(' - ')[0]  # ニュースの内容を取得（ソースを除く）
+            formatted_news_data.append([date, news])  # 2重配列として保存
+        return formatted_news_data
+    return []
+
 def main(use_latest_csv_date=False):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=365*3)
@@ -163,10 +178,15 @@ def main(use_latest_csv_date=False):
         if latest_date:
             start_date = datetime.strptime(latest_date, '%Y-%m-%d')
 
+    news_data = fetch_google_news()
+    print(news_data)
+    append_to_csv(csv_path, news_data)
+
     # start_dateとend_dateが同じ場合、returnする
     if start_date.date() == end_date.date():
         print("ニュースの追加はありません。")
         return
+
     date_ranges = generate_date_ranges(start_date, end_date)
 
     for start, end in date_ranges:
