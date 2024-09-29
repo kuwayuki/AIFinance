@@ -10,6 +10,8 @@ import main as mainCode
 
 API_KEY = 'WMvFsMAutRouFV1iWzvyDmBfTRqjKKVu'  # ここにAPIキーを入力してください
 IS_COMPACT_AI = False
+IS_GOOGLE_NEWS = True
+IS_NY_TIMES_NEWS = False
 
 def get_new_york(url):
     news_data = []
@@ -178,39 +180,40 @@ def main(use_latest_csv_date=False):
         if latest_date:
             start_date = datetime.strptime(latest_date, '%Y-%m-%d')
 
-    news_data = fetch_google_news()
-    print(news_data)
-    append_to_csv(csv_path, news_data)
+    if IS_GOOGLE_NEWS:
+        news_data = fetch_google_news()
+        print(news_data)
+        append_to_csv(csv_path, news_data)
 
     # start_dateとend_dateが同じ場合、returnする
     if start_date.date() == end_date.date():
         print("ニュースの追加はありません。")
         return
 
-    date_ranges = generate_date_ranges(start_date, end_date)
+    if IS_NY_TIMES_NEWS:
+        date_ranges = generate_date_ranges(start_date, end_date)
+        for start, end in date_ranges:
+            print(f"Fetching news from {start} to {end}")
+            # base_url = "https://news.google.com/rss/search"
+            # query = f"?q=after:{start}+before:{end}&hl=ja&gl=JP&ceid=JP:ja"
+            base_url = "https://api.nytimes.com/svc/search/v2/articlesearch.json"
+            # query = f"?q=stock+market&begin_date={start}&end_date={end}&api-key={API_KEY}"
+            # query = f"?q=business&begin_date={start}&end_date={end}&api-key={API_KEY}"
+            query = f"?q=business+OR+stock+market&begin_date={start}&end_date={end}&api-key={API_KEY}"
+            url = base_url + query
+            print(url)
 
-    for start, end in date_ranges:
-        print(f"Fetching news from {start} to {end}")
-        # base_url = "https://news.google.com/rss/search"
-        # query = f"?q=after:{start}+before:{end}&hl=ja&gl=JP&ceid=JP:ja"
-        base_url = "https://api.nytimes.com/svc/search/v2/articlesearch.json"
-        # query = f"?q=stock+market&begin_date={start}&end_date={end}&api-key={API_KEY}"
-        # query = f"?q=business&begin_date={start}&end_date={end}&api-key={API_KEY}"
-        query = f"?q=business+OR+stock+market&begin_date={start}&end_date={end}&api-key={API_KEY}"
-        url = base_url + query
-        print(url)
-
-        news_data = get_new_york(url)
-        # news_data = fetch_news_titles(soup)
-        append_to_csv(csv_path, news_data)
-        # 次の処理があるか確認してtime.sleep(10)を実行
-        if (start, end) != date_ranges[-1]:
-            time.sleep(10)
-        # soup = fetch_news_soup(url)
-        # if soup:
-        #     news_data = get_new_york(soup)
-        #     # news_data = fetch_news_titles(soup)
-        #     append_to_csv(csv_path, news_data)
+            news_data = get_new_york(url)
+            # news_data = fetch_news_titles(soup)
+            append_to_csv(csv_path, news_data)
+            # 次の処理があるか確認してtime.sleep(10)を実行
+            if (start, end) != date_ranges[-1]:
+                time.sleep(10)
+            # soup = fetch_news_soup(url)
+            # if soup:
+            #     news_data = get_new_york(soup)
+            #     # news_data = fetch_news_titles(soup)
+            #     append_to_csv(csv_path, news_data)
 
     if IS_COMPACT_AI:
         # プロンプトの生成
