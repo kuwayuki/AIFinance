@@ -123,7 +123,7 @@ def read_news_from_csv(file_path, encoding='utf-8'):
     return "\n".join(news_list), latest_date
 
 # 何年前のデータを削除するか指定できる関数
-def remove_old_news(file_name, days_ago=365 * 2):
+def remove_old_news(file_name, days_ago=365):
     current_date = datetime.now()
     cutoff_date = current_date - timedelta(days=days_ago)
     

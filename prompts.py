@@ -165,3 +165,18 @@ PROMPT_CSV_TO_COMPACT_SYSTEM = """
 PROMPT_CSV_TO_COMPACT = """
 下記は株価に関係のあるニュースです。これらのニュースから未来予測をしたいので、未来予測ができる内容のみコンパクトにまとめてください。
 """
+
+PROMPT_CAN_SLIM_SYSTEM = """
+有望なTickerシンボルのみを文字列の配列のみで返却してください。なければ解説をお願いします。
+"""
+# 有望なTickerシンボルのみを文字列の配列のみで返却してください。
+
+PROMPT_CAN_SLIM_USER = """
+下記はCAN-SLIM法で有望な銘柄一覧の候補です。以下の企業情報と過去のニュースを基に、CAN-SLIM法に該当する銘柄のみを求めたいです。
+{research}
+
+・過去のニュース
+{news}
+
+今日は{current_date}です。
+"""
