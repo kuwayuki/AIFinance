@@ -57,7 +57,7 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
                 depth_left = (left_peak_price - min_price) / left_peak_price * 100
                 depth_right = (right_peak_price - min_price) / right_peak_price * 100
                 # 深さが12〜35%の範囲にある場合のみ追加（depth_checkがTrueの場合）
-                if not depth_check or ((12 <= depth_left <= 35) or (12 <= depth_right <= 35)):
+                if not depth_check or ((12 <= depth_left <= 35) and (12 <= depth_right <= 35)):
                     min_idx.extend(local_min_idx)
                     new_max_idx.append(max_idx[i])
                     new_max_idx.append(max_idx[i + 1])
@@ -112,11 +112,11 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
                 print("取っ手部分の下降が確認できません。パターンを無効とします。")
                 # return False, None, None, None, None
 
-            # 最新カップの右高値からその後の最小値の下降が8-12%の範囲にあるかを確認
+            # 最新カップの右高値からその後の最小値の下降が12%の範囲にあるかを確認
             right_peak_price = data['Close'].values[right_peak]
             handle_depth = (right_peak_price - handle_min_price) / right_peak_price * 100
             if handle_depth > 12:
-                print(f"取っ手部分の下降が8〜12%の範囲外です: {handle_depth:.2f}%")
+                print(f"取っ手部分の下降が12%の範囲外です: {handle_depth:.2f}%")
                 # return False, None, None, None, None
 
             # 取っ手部分の傾きが急でないか（緩やかであることを確認）
@@ -163,36 +163,117 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
     else:
         return False, None, None, None, None
 
-def detect_saucer_with_handle(data, window=60, image_folder=None):
-    # 高値と安値の局所的な極大・極小を検出
+def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=True):
+    # 高値の局所的な極大を検出（ソーサーの両側）
     max_idx = argrelextrema(data['Close'].values, np.greater, order=window)[0]
-    min_idx = argrelextrema(data['Close'].values, np.less, order=window)[0]
 
+    # 安値の局所的な極小を検出（ソーサーの底、max_idxの間に限定）
+    min_idx = []
+    new_max_idx = []
+    for i in range(0, len(max_idx) - 1, 1):
+        if i + 1 < len(max_idx):
+            local_min_idx = argrelextrema(data['Close'].values[max_idx[i]:max_idx[i + 1]], np.less, order=window)[0]
+            if len(local_min_idx) > 0:
+                local_min_idx += max_idx[i]
+                min_price = data['Close'].values[local_min_idx[np.argmin(data['Close'].values[local_min_idx])]]
+                left_peak_price = data['Close'].values[max_idx[i]]
+                right_peak_price = data['Close'].values[max_idx[i + 1]]
+                depth_left = (left_peak_price - min_price) / left_peak_price * 100
+                depth_right = (right_peak_price - min_price) / right_peak_price * 100
+                # 深さが5〜15%の範囲にある場合のみ追加（depth_checkがTrueの場合）
+                if not depth_check or ((5 <= depth_left <= 15) and (5 <= depth_right <= 15)):
+                    min_idx.extend(local_min_idx)
+                    new_max_idx.append(max_idx[i])
+                    new_max_idx.append(max_idx[i + 1])
+
+    # 最後の max_idx 以降にある局所的な極小を追加
+    if len(max_idx) > 0:
+        last_max_idx = max_idx[-1]
+        local_min_idx_after_last_max = argrelextrema(data['Close'].values[last_max_idx:], np.less, order=window)[0]
+        if len(local_min_idx_after_last_max) > 0:
+            local_min_idx_after_last_max += last_max_idx
+            min_idx.extend(local_min_idx_after_last_max)
+
+    max_idx = np.array(new_max_idx)
+    min_idx = np.array(min_idx)
+    print(max_idx)
+    print(min_idx)
+    purchase_price = 0
+    lines = []
     if len(max_idx) >= 2 and len(min_idx) >= 1:
-        left_peak = max_idx[0]
+        # 最新２つのピークを選択
         right_peak = max_idx[-1]
-        saucer_bottom = min_idx[np.argmin(data['Close'].values[min_idx])]
+        left_peak = max_idx[-2]
 
-        # 取っ手部分の開始と終了を推定
-        handle_start = saucer_bottom
-        handle_end = right_peak
+        # ソーサーの底を選択
+        saucer_bottom_candidates = min_idx[(min_idx > left_peak) & (min_idx < right_peak)]
+        if len(saucer_bottom_candidates) == 0:
+            print("ソーサーの底が見つかりません。")
+            return False, None, None, None, None
+        saucer_bottom = saucer_bottom_candidates[np.argmin(data['Close'].values[saucer_bottom_candidates])]
 
-        # 取っ手部分のデータを取得
-        handle_data = data.iloc[handle_start:handle_end+1]
-
-        # 取っ手部分の高値を取得
-        handle_high = handle_data['Close'].max()
-        purchase_price = handle_high * 1.02  # 高値の2%上
-
-        # プロット用のポイントとラインを準備
         points = [
             {'index': left_peak, 'label': 'Left Peak', 'color': 'g'},
             {'index': saucer_bottom, 'label': 'Saucer Bottom', 'color': 'r'},
             {'index': right_peak, 'label': 'Right Peak', 'color': 'g'}
         ]
-        lines = [
-            {'y': purchase_price, 'label': 'Purchase Price', 'color': 'purple', 'linestyle': '--'}
-        ]
+        # 取っ手部分の開始点を設定（ソーサーの右ピークから軽い調整部分）
+        handle_start_candidates = min_idx[min_idx > right_peak]
+        if len(handle_start_candidates) == 0:
+            print("取っ手部分の開始点が見つかりません。")
+            return False, None, None, None, None
+        else:
+            handle_start = handle_start_candidates[0]
+            handle_end = len(data) - 1  # データの最終インデックスを終了点とする
+
+            # 取っ手部分のデータを取得
+            handle_data = data.iloc[handle_start:handle_end + 1]
+
+            if len(handle_data) < 2:
+                print("取っ手部分が1週間未満です。パターンを無効とします。")
+                return False, None, None, None, None
+
+            handle_min_price = handle_data['Close'].min()
+            if handle_min_price >= data['Close'].values[right_peak]:
+                print("取っ手部分の下降が確認できません。パターンを無効とします。")
+                # return False, None, None, None, None
+
+            # 最新ソーサーの右高値からその後の最小値の下降が5%の範囲にあるかを確認
+            right_peak_price = data['Close'].values[right_peak]
+            handle_depth = (right_peak_price - handle_min_price) / right_peak_price * 100
+            if handle_depth > 5:
+                print(f"取っ手部分の下降が5%の範囲外です: {handle_depth:.2f}%")
+                # return False, None, None, None, None
+
+            # 取っ手部分の傾きが急でないか（緩やかであることを確認）
+            handle_slope = (handle_data['Close'].iloc[-1] - handle_data['Close'].iloc[0]) / len(handle_data)
+            if handle_slope < 0 or handle_slope > abs(data['Close'].values[right_peak] - handle_min_price) / len(handle_data):
+                print("取っ手部分の傾きが緩やかではありません。パターンを無効とします。")
+                # return False, None, None, None, None
+
+            # 購入価格はソーサーの右側のピーク（取っ手の上限）に設定
+            purchase_price = data['Close'].values[right_peak]
+            lines = [
+                {'y': purchase_price, 'label': 'Purchase Price', 'color': 'purple', 'linestyle': '--'}
+            ]
+            # 取っ手部分のラインを追加
+            lines.append({
+                'x': [data.index[handle_start], data.index[handle_end]],
+                'y': [data['Close'].iloc[handle_start], data['Close'].iloc[handle_end]],
+                'label': 'Handle',
+                'color': 'cyan',
+                'linestyle': '-'
+            })
+
+        # max_idx の他の局所的極大値も追加（色を区別）
+        for idx in max_idx:
+            if idx != left_peak and idx != right_peak:
+                points.append({'index': idx, 'label': 'Local Max', 'color': 'b'})
+
+        # min_idx の他の局所的極小値も追加（色を区別）
+        for idx in min_idx:
+            if idx != saucer_bottom:
+                points.append({'index': idx, 'label': 'Local Min', 'color': 'orange'})
 
         # 共通のプロット関数を呼び出す
         plot_pattern(
@@ -207,16 +288,27 @@ def detect_saucer_with_handle(data, window=60, image_folder=None):
         return True, purchase_price, left_peak, saucer_bottom, right_peak
     else:
         return False, None, None, None, None
-def detect_double_bottom(data, window=20, image_folder=None):
+
+def detect_double_bottom(data, window=2, image_folder=None):
     # 局所的な極小値（ボトム）を検出
     min_idx = argrelextrema(data['Close'].values, np.less, order=window)[0]
 
     if len(min_idx) >= 2:
-        first_bottom = min_idx[0]
-        second_bottom = min_idx[1]
+        first_bottom = min_idx[-2]
+        second_bottom = min_idx[-1]
+
+        # 2つのボトムが近い価格帯であることを確認（差が10%以内）
+        if abs(data['Close'].iloc[first_bottom] - data['Close'].iloc[second_bottom]) / data['Close'].iloc[first_bottom] > 0.1:
+            print("2つのボトムの価格差が大きいため、ダブルボトムとは認められません。")
+            return False, None, None, None
 
         # ネックライン（2つのボトム間の高値）を取得
         neckline = data['Close'][first_bottom:second_bottom+1].max()
+
+        # ネックラインがボトムから十分な差があるか確認（最低15%の差）
+        if (neckline - min(data['Close'].iloc[first_bottom], data['Close'].iloc[second_bottom])) / min(data['Close'].iloc[first_bottom], data['Close'].iloc[second_bottom]) < 0.15:
+            print("ネックラインがボトムから十分に離れていないため、ダブルボトムとは認められません。")
+            return False, None, None, None
         purchase_price = neckline * 1.02  # ネックラインの2%上
 
         # プロット用のポイントとラインを準備
@@ -242,6 +334,8 @@ def detect_double_bottom(data, window=20, image_folder=None):
         return True, purchase_price, first_bottom, second_bottom
     else:
         return False, None, None, None
+
+
 def detect_flat_base(data, period=30, tolerance=0.03, image_folder=None):
     recent_data = data[-period:]
     max_price = recent_data['Close'].max()
@@ -272,6 +366,7 @@ def detect_flat_base(data, period=30, tolerance=0.03, image_folder=None):
         return True, purchase_price
     else:
         return False, None
+
 def detect_ascending_base(data, window=60, image_folder=None):
     # 移動平均線を使用してトレンドを確認
     data['MA'] = data['Close'].rolling(window=window).mean()
