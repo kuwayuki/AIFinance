@@ -57,7 +57,7 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
                 depth_left = (left_peak_price - min_price) / left_peak_price * 100
                 depth_right = (right_peak_price - min_price) / right_peak_price * 100
                 # 深さが12〜35%の範囲にある場合のみ追加（depth_checkがTrueの場合）
-                if not depth_check or ((12 <= depth_left <= 35) and (12 <= depth_right <= 35)):
+                if not depth_check or ((12 <= depth_left <= 35) or (12 <= depth_right <= 35)):
                     min_idx.extend(local_min_idx)
                     new_max_idx.append(max_idx[i])
                     new_max_idx.append(max_idx[i + 1])
@@ -72,52 +72,72 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
 
     max_idx = np.array(new_max_idx)
     min_idx = np.array(min_idx)
-
+    purchase_price = 0
+    lines = []
     if len(max_idx) >= 2 and len(min_idx) >= 1:
         # 最新２つのピークを選択
         right_peak = max_idx[-1]
         left_peak = max_idx[-2]
-        right_bottom_peak = min_idx[-1]
 
         # カップの底を選択
         cup_bottom_candidates = min_idx[(min_idx > left_peak) & (min_idx < right_peak)]
         if len(cup_bottom_candidates) == 0:
             print("カップの底が見つかりません。")
-            return False, None, None, None, None
+            # return False, None, None, None, None
         cup_bottom = cup_bottom_candidates[np.argmin(data['Close'].values[cup_bottom_candidates])]
 
-        # 取っ手部分の開始点が見つからない場合、カップの底を開始点とする
-        handle_start = right_bottom_peak
-        handle_end = data.index.get_loc(data.index[-1])
-
-        # 取っ手部分のデータを取得
-        handle_data = data.iloc[handle_start:handle_end + 1]
-
-        # 取っ手部分の長さが1週間以上であることを確認
-        print(len(handle_data))
-        if len(handle_data) < 2:  # 1週間
-            print("取っ手部分が1週間未満です。パターンを無効とします。")
-            return False, None, None, None, None
-
-        # 取っ手部分の値動きが下降しているか確認（右ピークまでに一定の下落があること）
-        handle_min_price = handle_data['Close'].min()
-        if handle_min_price >= right_peak_price:
-            print("取っ手部分の下降が確認できません。パターンを無効とします。")
-            return False, None, None, None, None
-
-        # 取っ手部分の最新の価格（右端の値）を購入価格に設定
-        handle_high = handle_data['Close'].iloc[-1]  # 最新（右端）の値を使用
-        purchase_price = handle_high * 1
-
-        # プロット用のポイントとラインを準備
         points = [
             {'index': left_peak, 'label': 'Left Peak', 'color': 'g'},
             {'index': cup_bottom, 'label': 'Cup Bottom', 'color': 'r'},
             {'index': right_peak, 'label': 'Right Peak', 'color': 'g'}
         ]
-        lines = [
-            {'y': purchase_price, 'label': 'Purchase Price', 'color': 'purple', 'linestyle': '--'}
-        ]
+        # 取っ手部分の開始点を設定（カップの右ピークから軽い調整部分）
+        handle_start_candidates = min_idx[min_idx > right_peak]
+        if len(handle_start_candidates) == 0:
+            print("取っ手部分の開始点が見つかりません。")
+            # return False, None, None, None, None
+        else:
+            handle_start = handle_start_candidates[0]
+            handle_end = len(data) - 1  # データの最終インデックスを終了点とする
+
+            # 取っ手部分のデータを取得
+            handle_data = data.iloc[handle_start:handle_end + 1]
+
+            if len(handle_data) < 2:
+                print("取っ手部分が1週間未満です。パターンを無効とします。")
+                # return False, None, None, None, None
+
+            handle_min_price = handle_data['Close'].min()
+            if handle_min_price >= data['Close'].values[right_peak]:
+                print("取っ手部分の下降が確認できません。パターンを無効とします。")
+                # return False, None, None, None, None
+
+            # 最新カップの右高値からその後の最小値の下降が8-12%の範囲にあるかを確認
+            right_peak_price = data['Close'].values[right_peak]
+            handle_depth = (right_peak_price - handle_min_price) / right_peak_price * 100
+            if handle_depth > 12:
+                print(f"取っ手部分の下降が8〜12%の範囲外です: {handle_depth:.2f}%")
+                # return False, None, None, None, None
+
+            # 取っ手部分の傾きが急でないか（緩やかであることを確認）
+            handle_slope = (handle_data['Close'].iloc[-1] - handle_data['Close'].iloc[0]) / len(handle_data)
+            if handle_slope < 0 or handle_slope > abs(data['Close'].values[right_peak] - handle_min_price) / len(handle_data):
+                print("取っ手部分の傾きが緩やかではありません。パターンを無効とします。")
+                return False, None, None, None, None
+
+            # 購入価格はカップの右側のピーク（取っ手の上限）に設定
+            purchase_price = data['Close'].values[right_peak]
+            lines = [
+                {'y': purchase_price, 'label': 'Purchase Price', 'color': 'purple', 'linestyle': '--'}
+            ]
+            # 取っ手部分のラインを追加
+            lines.append({
+                'x': [data.index[handle_start], data.index[handle_end]],
+                'y': [data['Close'].iloc[handle_start], data['Close'].iloc[handle_end]],
+                'label': 'Handle',
+                'color': 'cyan',
+                'linestyle': '-'  # 実線で取っ手部分を表示
+            })
 
         # max_idx の他の局所的極大値も追加（色を区別）
         for idx in max_idx:
@@ -128,15 +148,6 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
         for idx in min_idx:
             if idx != cup_bottom:
                 points.append({'index': idx, 'label': 'Local Min', 'color': 'orange'})  # 局所的極小値
-
-        # 取っ手部分のラインを追加
-        lines.append({
-            'x': [data.index[handle_start], data.index[handle_end]],
-            'y': [data['Close'].iloc[handle_start], data['Close'].iloc[handle_end]],
-            'label': 'Handle',
-            'color': 'cyan',
-            'linestyle': '-'  # 実線で取っ手部分を表示
-        })
 
         # 共通のプロット関数を呼び出す
         plot_pattern(
