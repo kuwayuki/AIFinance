@@ -485,8 +485,8 @@ def get_buy_sell_price(ticker, date = 720):
     end_date = datetime.now().strftime('%Y-%m-%d')
     folder_path = create_folder_path(ticker)
     comp_file_path = os.path.join(folder_path, f'{ticker}_etf.csv')
-    data = save_history_data(ticker, start_date, end_date, comp_file_path)
-    # data = load_etf_data(comp_file_path)
+    # data = save_history_data(ticker, start_date, end_date, comp_file_path)
+    data = load_etf_data(comp_file_path)
 
     # 買い価格を決定
     get_buy_price(data, folder_path)

@@ -39,42 +39,63 @@ def plot_pattern(data, points, lines, title, image_name, image_folder):
     else:
         plt.show()
 
-# カップの高値から安値までの深さは12～35％が好ましい
-def detect_cup_with_handle(data, window=4, image_folder=None):
+def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
     # 高値の局所的な極大を検出（カップの両側）
     max_idx = argrelextrema(data['Close'].values, np.greater, order=window)[0]
 
-    # 安値の局所的な極小を検出（カップの底）
-    min_idx = argrelextrema(data['Close'].values, np.less, order=window)[0]
+    # 安値の局所的な極小を検出（カップの底、max_idxの間に限定）
+    min_idx = []
+    new_max_idx = []
+    for i in range(0, len(max_idx) - 1, 1):
+        if i + 1 < len(max_idx):
+            local_min_idx = argrelextrema(data['Close'].values[max_idx[i]:max_idx[i + 1]], np.less, order=window)[0]
+            if len(local_min_idx) > 0:
+                local_min_idx += max_idx[i]
+                min_price = data['Close'].values[local_min_idx[np.argmin(data['Close'].values[local_min_idx])]]
+                left_peak_price = data['Close'].values[max_idx[i]]
+                right_peak_price = data['Close'].values[max_idx[i + 1]]
+                depth_left = (left_peak_price - min_price) / left_peak_price * 100
+                depth_right = (right_peak_price - min_price) / right_peak_price * 100
+                # 深さが12〜35%の範囲にある場合のみ追加（depth_checkがTrueの場合）
+                if not depth_check or ((12 <= depth_left <= 35) and (12 <= depth_right <= 35)):
+                    min_idx.extend(local_min_idx)
+                    new_max_idx.append(max_idx[i])
+                    new_max_idx.append(max_idx[i + 1])
+
+    # 最後の max_idx 以降にある局所的な極小を追加
+    if len(max_idx) > 0:
+        last_max_idx = max_idx[-1]
+        local_min_idx_after_last_max = argrelextrema(data['Close'].values[last_max_idx:], np.less, order=window)[0]
+        if len(local_min_idx_after_last_max) > 0:
+            local_min_idx_after_last_max += last_max_idx
+            min_idx.extend(local_min_idx_after_last_max)
+
+    max_idx = np.array(new_max_idx)
+    min_idx = np.array(min_idx)
 
     if len(max_idx) >= 2 and len(min_idx) >= 1:
-        left_peak = max_idx[0]
+        # 最新２つのピークを選択
         right_peak = max_idx[-1]
-        cup_bottom = min_idx[np.argmin(data['Close'].values[min_idx])]
+        left_peak = max_idx[-2]
+        right_bottom_peak = min_idx[-1]
 
-        # カップの深さを確認（高値から安値までの比率）
-        left_peak_price = data['Close'].values[left_peak]
-        right_peak_price = data['Close'].values[right_peak]
-        cup_bottom_price = data['Close'].values[cup_bottom]
+        # カップの底を選択
+        cup_bottom_candidates = min_idx[(min_idx > left_peak) & (min_idx < right_peak)]
+        if len(cup_bottom_candidates) == 0:
+            print("カップの底が見つかりません。")
+            return False, None, None, None, None
+        cup_bottom = cup_bottom_candidates[np.argmin(data['Close'].values[cup_bottom_candidates])]
 
-        # カップの深さ（%）
-        depth = (left_peak_price - cup_bottom_price) / left_peak_price * 100
-
-        # 深さが12〜35%の範囲にあるかチェック
-        # if depth < 12 or depth > 35:
-        #     print(f"カップの深さが12〜35％の範囲外です: {depth:.2f}%")
-        #     return False, None, None, None, None
-
-        print(depth)
-        # 取っ手部分の開始と終了を推定（右のピークより前で下落があるか確認）
-        handle_start = cup_bottom
-        handle_end = right_peak
+        # 取っ手部分の開始点が見つからない場合、カップの底を開始点とする
+        handle_start = right_bottom_peak
+        handle_end = data.index.get_loc(data.index[-1])
 
         # 取っ手部分のデータを取得
         handle_data = data.iloc[handle_start:handle_end + 1]
 
         # 取っ手部分の長さが1週間以上であることを確認
-        if len(handle_data) < 1:
+        print(len(handle_data))
+        if len(handle_data) < 2:  # 1週間
             print("取っ手部分が1週間未満です。パターンを無効とします。")
             return False, None, None, None, None
 
