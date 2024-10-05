@@ -467,6 +467,7 @@ def detect_cup_without_handle(data, window=20):
             return True, left_peak, cup_bottom, right_peak
     return False, None, None, None
 
+# TODO: 取引量の追加
 def convert_to_weekly(data):
     weekly_data = data.resample('W', on='Date').agg({
         'Open': 'first',
@@ -494,7 +495,7 @@ def get_buy_sell_price(ticker, date = 720):
     get_buy_price(data, folder_path)
 
     # 売り価格を決定
-    # get_sell_price(data)
+    get_sell_price(data)
 
     # 損切価格を決定
     # get_buy_price(data)
@@ -507,17 +508,23 @@ def get_buy_price(data, image_folder=None, is_cup_with_handle=False, is_saucer_w
         if pattern_found:
             print(f"取っ手付きカップ型が検出されました。購入価格は {purchase_price} です。")
 
-    if is_saucer_with_handle:
-        weekly_data = convert_to_weekly(data_filter(data, 360))
-        pattern_found, purchase_price, left_peak, saucer_bottom, right_peak = util_can_slim_type.detect_saucer_with_handle(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"取っ手付きソーサー型が検出されました。購入価格は {purchase_price} です。")
-
     if is_double_bottom:
         weekly_data = convert_to_weekly(data_filter(data, 180))
         pattern_found, purchase_price, first_bottom, second_bottom = util_can_slim_type.detect_double_bottom(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"ダブルボトム型が検出されました。購入価格は {purchase_price} です。")
+
+    if is_vcp:
+        weekly_data = convert_to_weekly(data_filter(data, 180))
+        pattern_found, purchase_price = util_can_slim_type.detect_vcp(weekly_data, image_folder=image_folder)
+        if pattern_found:
+            print(f"VCPパターンが検出されました。購入価格は {purchase_price} です。")
+
+    if is_saucer_with_handle:
+        weekly_data = convert_to_weekly(data_filter(data, 360))
+        pattern_found, purchase_price, left_peak, saucer_bottom, right_peak = util_can_slim_type.detect_saucer_with_handle(weekly_data, image_folder=image_folder)
+        if pattern_found:
+            print(f"取っ手付きソーサー型が検出されました。購入価格は {purchase_price} です。")
 
     if is_flat_base:
         weekly_data = convert_to_weekly(data_filter(data, 60))
@@ -530,18 +537,6 @@ def get_buy_price(data, image_folder=None, is_cup_with_handle=False, is_saucer_w
         pattern_found, purchase_price = util_can_slim_type.detect_ascending_base(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"上昇トライアングル型が検出されました。購入価格は {purchase_price} です。")
-
-    if is_consolidation:
-        weekly_data = convert_to_weekly(data_filter(data, 90))
-        pattern_found, purchase_price = util_can_slim_type.detect_consolidation(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"コンソリデーション型が検出されました。購入価格は {purchase_price} です。")
-
-    if is_vcp:
-        weekly_data = convert_to_weekly(data_filter(data, 180))
-        pattern_found, purchase_price = util_can_slim_type.detect_vcp(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"VCPパターンが検出されました。購入価格は {purchase_price} です。")
 
     # is_cup_without_handle, left, bottom, right = util_can_slim_type.detect_cup_without_handle(data)
     # if is_cup_without_handle:

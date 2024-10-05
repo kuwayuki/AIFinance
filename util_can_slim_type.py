@@ -336,14 +336,14 @@ def detect_double_bottom(data, window=2, image_folder=None):
         return False, None, None, None
 
 
-def detect_flat_base(data, period=30, tolerance=0.03, image_folder=None):
+def detect_flat_base(data, period=7, tolerance=0.05, image_folder=None):
     recent_data = data[-period:]
     max_price = recent_data['Close'].max()
     min_price = recent_data['Close'].min()
 
     # 変動幅が許容範囲内か確認
     if (max_price - min_price) / max_price < tolerance:
-        purchase_price = max_price * 1.02  # ベースの高値の2%上
+        purchase_price = max_price * 1.03  # ベースの高値の3%上
 
         # プロット用のラインを準備
         points = []
@@ -365,6 +365,7 @@ def detect_flat_base(data, period=30, tolerance=0.03, image_folder=None):
 
         return True, purchase_price
     else:
+        print('範囲外です')
         return False, None
 
 def detect_ascending_base(data, window=60, image_folder=None):
@@ -466,7 +467,15 @@ def calculate_buy_price(data, right_peak, buffer_percent=1.02):
     buy_price = right_peak_price * buffer_percent
     return buy_price
 
-
+# 20〜25%の利益確定ルール: 一定の利益が得られたら部分的に売却。
+# 7〜8%の損切りルール: 早期の損失確定で大きな損失を避ける。
+# クライマックス・ランでの売却: 短期間の急激な上昇後に売却。
+# トレンドラインの下抜け: 長期トレンドの終わりの兆し。
+# 上方チャネルラインの到達: 過熱感を示し、反転のリスクが高い。
+# 逆カップウィズハンドル型: 下落トレンドへの反転を示すパターン。
+# 出来高減少での新高値形成失敗: 買い手の勢いの減少を示す。
+# コンソリデーションブレイク: 安定が崩れて下方に動いた場合。
+# 急上昇後の調整時に一部売却: 調整を見越して部分的に利益を確定。
 def detect_upper_channel_line(data, date = 360):
 
     # 高値と日付を抽出
