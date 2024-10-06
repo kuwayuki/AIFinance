@@ -196,8 +196,6 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
 
     max_idx = np.array(new_max_idx)
     min_idx = np.array(min_idx)
-    print(max_idx)
-    print(min_idx)
     purchase_price = 0
     lines = []
     if len(max_idx) >= 2 and len(min_idx) >= 1:
@@ -427,6 +425,7 @@ def detect_consolidation(data, period=30, tolerance=0.05, image_folder=None):
         return True, breakout_price
     else:
         return False, None
+
 def detect_vcp(data, window_sizes=[60, 40, 20, 10], image_folder=None):
     volatilities = []
     for window in window_sizes:
@@ -467,6 +466,181 @@ def calculate_buy_price(data, right_peak, buffer_percent=1.02):
     buy_price = right_peak_price * buffer_percent
     return buy_price
 
+def detect_market_downtrend(data, dow_data, sp500_data, ma_period=25, threshold=0.03, image_folder=None):
+    def is_downtrend(index_data):
+        # 移動平均を計算
+        moving_average = index_data['Close'].rolling(window=ma_period).mean()
+        # 最新の価格と移動平均を取得
+        latest_price = index_data['Close'].iloc[-1]
+        ma_value = moving_average.iloc[-1]
+        # 移動平均線が継続して下向きかどうかを確認（過去5期間の傾きをチェック）
+        ma_slope = moving_average.diff().iloc[-5:]
+        # 最新の価格が移動平均より一定割合下であり、移動平均線が過去5期間で一貫して下向きであれば下降トレンドと判断
+        return latest_price < ma_value * (1 - threshold) and (ma_slope < 0).all()
+    
+    # ダウ平均とS&P500の下降トレンドを確認
+    dow_downtrend = is_downtrend(dow_data)
+    sp500_downtrend = is_downtrend(sp500_data)
+
+    # どちらかが下降トレンドに入っていれば売りシグナルを出す
+    if dow_downtrend or sp500_downtrend:
+        # プロットを作成
+        plot_pattern(data=data, title='Market Downtrend', image_name='market_downtrend.png', image_folder=image_folder)
+        return True, data['Close'].iloc[-1]
+    else:
+        return False, None
+
+def detect_moving_average_break(data, ma_period=50, threshold=0.05, image_folder=None):
+    moving_average = data['Close'].rolling(window=ma_period).mean()
+    latest_price = data['Close'].iloc[-1]
+    ma_value = moving_average.iloc[-1]
+    previous_price = data['Close'].iloc[-2]
+    previous_ma_value = moving_average.iloc[-2]
+
+    # 元々移動平均線より上にあり、その後急激に5%以上下回ったかを確認
+    if previous_price > previous_ma_value and latest_price < ma_value * (1 - threshold):
+        plot_pattern(data=data, title='Moving Average Break', image_name='moving_average_break.png', image_folder=image_folder)
+        return True, latest_price
+    else:
+        return False, None
+
+def detect_climax_top(data, window=4, image_folder=None):
+    latest_high = data['Close'].iloc[-1]
+    latest_low = data['Close'].iloc[-1]
+    recent_volume = data['Volume'][-window:]
+    max_volume = recent_volume.max()
+    latest_volume = recent_volume.iloc[-1]
+    
+    # プロット用のポイントとラインを準備
+    points = [
+        {'index': data.index.get_loc(data['Close'][-window:].idxmin()), 'label': 'Latest Low', 'color': 'blue'},
+        {'index': data.index.get_loc(data['Close'][-window:].idxmax()), 'label': 'Latest High', 'color': 'red'},
+        {'index': data.index.get_loc(recent_volume.idxmax()), 'label': 'Max Volume', 'color': 'orange'}
+    ]
+    lines = [
+        {'y': latest_high, 'label': 'Latest High', 'color': 'red', 'linestyle': '--'},
+        {'y': latest_low, 'label': 'Latest Low', 'color': 'blue', 'linestyle': '--'}
+    ]
+    
+    plot_pattern(data=data, points=points, lines=lines, title='Climax Top', image_name='climax_top.png', image_folder=image_folder)
+
+
+    # 30%以上の急上昇を確認し、最大の陽線（出来高の急増）を確認
+    if (latest_high - latest_low) / latest_low > 0.3 and latest_volume >= max_volume * 1.2:  # 出来高が最大出来高の1.2倍以上
+        sell_price = latest_high * 0.95  # 高値からの5%下で売り
+        
+        return True, sell_price
+    else:
+        return False, None
+
+def detect_exhaustion_gap(data, image_folder=None):
+    if len(data) < 2:
+        return False, None
+
+    gap_up = data['Low'].iloc[-2] < data['High'].iloc[-1]  # ギャップアップを確認
+    high_formed = data['Close'].iloc[-1] < data['High'].iloc[-1]  # 高値更新後に失速
+    
+    if gap_up and high_formed:
+        sell_price = data['Close'].iloc[-1]
+        plot_pattern(data=data, title='Exhaustion Gap', image_name='exhaustion_gap.png', image_folder=image_folder)
+        return True, sell_price
+    else:
+        return False, None
+
+def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_folder=None):
+    # 最高値のインデックスを取得
+    high_indices = argrelextrema(data['Close'].values, np.greater, order=window)[0]
+    high_values = data['Close'].iloc[high_indices]
+    
+    # 最高値が3つ以上ある場合に最新の3つの高値を使って直線を引く
+    if len(high_values) >= 3:
+        latest_high_indices = high_indices[-3:]
+        latest_high_values = high_values[-3:]
+        # 線形回帰で3つの最新高値を結ぶ
+        slope, intercept, _, _, _ = linregress(latest_high_indices, latest_high_values)
+        # 傾きが負の場合はパターンを無効とする
+        if slope <= 0:
+            return False, None
+        numeric_indices = np.arange(len(data))  # インデックスを数値に変換
+        upper_channel_line = slope * numeric_indices + intercept
+    else:
+        rolling_mean = data['Close'].rolling(window=window).mean()
+        rolling_std = data['Close'].rolling(window=window).std()
+        upper_channel_line = rolling_mean + (rolling_std * channel_multiplier)
+
+    latest_price = data['Close'].iloc[-1]
+    upper_line_price = upper_channel_line[-1]
+
+    # プロット用のライン
+    lines = [
+        {'y': upper_line_price, 'label': 'Upper Channel Line', 'color': 'red', 'linestyle': '--'},
+        {'x': data.index, 'y': upper_channel_line, 'label': 'Upper Trend Line', 'color': 'orange', 'linestyle': '-'}
+    ]
+    # プロット用のポイント（最新の3つの高値）
+    points = [
+        {'index': idx, 'label': 'High Point', 'color': 'green'} for idx in latest_high_indices
+    ]
+    plot_pattern(data=data, lines=lines, points=points, title='Upper Channel Line', image_name='upper_channel_line.png', image_folder=image_folder)
+
+    if latest_price >= upper_line_price:
+        return True, latest_price
+    else:
+        return False, latest_price
+
+def detect_double_top(data, window=10, image_folder=None):
+    """
+    ダブルトップを使用して売りシグナルを検出する関数。
+    
+    Parameters:
+    - data: DataFrame（週足の株価データ）
+    - window: int（ピーク間の期間）
+    - image_folder: str（プロットを保存するフォルダパス）
+    
+    Returns:
+    - sell_signal: bool（売りシグナルの有無）
+    - sell_price: float（売り価格）
+    """
+    max_idx = argrelextrema(data['Close'].values, np.greater, order=window)[0]
+
+    if len(max_idx) >= 2:
+        first_peak = max_idx[-2]
+        second_peak = max_idx[-1]
+        
+        if abs(data['Close'].iloc[first_peak] - data['Close'].iloc[second_peak]) / data['Close'].iloc[first_peak] < 0.05:
+            neckline = data['Close'][first_peak:second_peak+1].min()
+            sell_price = neckline * 0.98  # ネックラインを割り込むことで売り
+            plot_pattern(data=data, title='Double Top', image_name='double_top.png', image_folder=image_folder)
+            return True, sell_price
+    return False, None
+
+def detect_railroad_tracks(data, image_folder=None):
+    """
+    レールロードトラックを使用して売りシグナルを検出する関数。
+    
+    Parameters:
+    - data: DataFrame（週足の株価データ）
+    - image_folder: str（プロットを保存するフォルダパス）
+    
+    Returns:
+    - sell_signal: bool（売りシグナルの有無）
+    - sell_price: float（売り価格）
+    """
+    if len(data) < 2:
+        return False, None
+    
+    prev_candle = data.iloc[-2]
+    latest_candle = data.iloc[-1]
+
+    # 前日が陽線、当日が陰線でかつ同程度の長さか確認
+    if (prev_candle['Close'] > prev_candle['Open'] and
+        latest_candle['Close'] < latest_candle['Open'] and
+        abs(prev_candle['Close'] - prev_candle['Open']) * 0.9 < abs(latest_candle['Close'] - latest_candle['Open']) < abs(prev_candle['Close'] - prev_candle['Open']) * 1.1):
+        sell_price = latest_candle['Close']
+        plot_pattern(data=data, title='Railroad Tracks', image_name='railroad_tracks.png', image_folder=image_folder)
+        return True, sell_price
+    else:
+        return False, None
+   
 # 20〜25%の利益確定ルール: 一定の利益が得られたら部分的に売却。
 # 7〜8%の損切りルール: 早期の損失確定で大きな損失を避ける。
 # クライマックス・ランでの売却: 短期間の急激な上昇後に売却。
@@ -476,64 +650,64 @@ def calculate_buy_price(data, right_peak, buffer_percent=1.02):
 # 出来高減少での新高値形成失敗: 買い手の勢いの減少を示す。
 # コンソリデーションブレイク: 安定が崩れて下方に動いた場合。
 # 急上昇後の調整時に一部売却: 調整を見越して部分的に利益を確定。
-def detect_upper_channel_line(data, date = 360):
+# def detect_upper_channel_line(data, date = 360):
 
-    # 高値と日付を抽出
-    highs = data['High']
-    dates = pd.to_datetime(data['Date'])
+#     # 高値と日付を抽出
+#     highs = data['High']
+#     dates = pd.to_datetime(data['Date'])
     
-    # 最高値の抽出（過去数ヶ月分、最低3つの高値を検出）
-    high_points = []
-    num_highs_needed = 3
-    for i in range(1, len(highs) - 1):
-        # 高値の条件: 前後の日よりも高い
-        if highs[i] > highs[i - 1] and highs[i] > highs[i + 1]:
-            high_points.append((dates[i], highs[i]))
+#     # 最高値の抽出（過去数ヶ月分、最低3つの高値を検出）
+#     high_points = []
+#     num_highs_needed = 3
+#     for i in range(1, len(highs) - 1):
+#         # 高値の条件: 前後の日よりも高い
+#         if highs[i] > highs[i - 1] and highs[i] > highs[i + 1]:
+#             high_points.append((dates[i], highs[i]))
         
-        if len(high_points) >= num_highs_needed:
-            break
+#         if len(high_points) >= num_highs_needed:
+#             break
     
-    # 高値が3つ以上あるかチェック
-    if len(high_points) < num_highs_needed:
-        print(f"高値が十分にありません")
-        return None, None
+#     # 高値が3つ以上あるかチェック
+#     if len(high_points) < num_highs_needed:
+#         print(f"高値が十分にありません")
+#         return None, None
     
-    # 高値の座標を取得
-    high_dates = [point[0].toordinal() for point in high_points]  # 日付を数値化
-    high_values = [point[1] for point in high_points]  # 高値の価格
+#     # 高値の座標を取得
+#     high_dates = [point[0].toordinal() for point in high_points]  # 日付を数値化
+#     high_values = [point[1] for point in high_points]  # 高値の価格
     
-    # 高値の直線回帰を行い、チャネルラインを作成
-    slope, intercept, _, _, _ = linregress(high_dates, high_values)
+#     # 高値の直線回帰を行い、チャネルラインを作成
+#     slope, intercept, _, _, _ = linregress(high_dates, high_values)
     
-    # 直線（上方チャネルライン）の式: y = slope * x + intercept
-    upper_channel_line = slope * dates.apply(lambda date: date.toordinal()) + intercept
+#     # 直線（上方チャネルライン）の式: y = slope * x + intercept
+#     upper_channel_line = slope * dates.apply(lambda date: date.toordinal()) + intercept
     
-    # 現在の価格
-    current_price = data['Close'].iloc[-1]
+#     # 現在の価格
+#     current_price = data['Close'].iloc[-1]
     
-    # 売りサイン: 現在の価格が上方チャネルラインを超えた場合
-    sell_signal = current_price > upper_channel_line.iloc[-1]
+#     # 売りサイン: 現在の価格が上方チャネルラインを超えた場合
+#     sell_signal = current_price > upper_channel_line.iloc[-1]
     
-    # 次の売り価格を予測 (例えば、1週間後の価格を予測)
-    future_date = dates.iloc[-1] + pd.Timedelta(days=7)
-    future_date_ordinal = future_date.toordinal()
-    future_sell_price = slope * future_date_ordinal + intercept
+#     # 次の売り価格を予測 (例えば、1週間後の価格を予測)
+#     future_date = dates.iloc[-1] + pd.Timedelta(days=7)
+#     future_date_ordinal = future_date.toordinal()
+#     future_sell_price = slope * future_date_ordinal + intercept
 
-    # 結果を出力
-    print(f'現在価格: {current_price}')
-    print(f'売りサイン: {sell_signal} (上方チャネルライン: {upper_channel_line.iloc[-1]})')
-    print(f'次の売り価格（1週間後予測）: {future_sell_price}（予測日: {future_date.strftime("%Y-%m-%d")}）')
+#     # 結果を出力
+#     print(f'現在価格: {current_price}')
+#     print(f'売りサイン: {sell_signal} (上方チャネルライン: {upper_channel_line.iloc[-1]})')
+#     print(f'次の売り価格（1週間後予測）: {future_sell_price}（予測日: {future_date.strftime("%Y-%m-%d")}）')
     
-    # グラフの描画（オプション）
-    plt.figure(figsize=(10, 6))
-    plt.plot(dates, highs, label="高値", color="blue")
-    plt.plot(dates, upper_channel_line, label="上方チャネルライン", color="red")
-    plt.scatter([point[0] for point in high_points], [point[1] for point in high_points], color="green", label="高値のポイント")
-    plt.axhline(y=future_sell_price, color='orange', linestyle='--', label="次の売り価格予測")
-    plt.title(f'高値と上方チャネルライン')
-    plt.xlabel("日付")
-    plt.ylabel("価格")
-    plt.legend()
-    plt.show()
+#     # グラフの描画（オプション）
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(dates, highs, label="高値", color="blue")
+#     plt.plot(dates, upper_channel_line, label="上方チャネルライン", color="red")
+#     plt.scatter([point[0] for point in high_points], [point[1] for point in high_points], color="green", label="高値のポイント")
+#     plt.axhline(y=future_sell_price, color='orange', linestyle='--', label="次の売り価格予測")
+#     plt.title(f'高値と上方チャネルライン')
+#     plt.xlabel("日付")
+#     plt.ylabel("価格")
+#     plt.legend()
+#     plt.show()
     
-    return upper_channel_line.iloc[-1], sell_signal
+#     return upper_channel_line.iloc[-1], sell_signal

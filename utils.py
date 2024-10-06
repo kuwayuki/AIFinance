@@ -17,6 +17,7 @@ from prompts import PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT
 from scipy.stats import linregress
 from scipy.signal import argrelextrema
 import numpy as np
+from yahooquery import Ticker
  # pip install scipy
 # import fredapi
 
@@ -121,8 +122,20 @@ def fetch_news_titles(soup, detailed=False, filter_keyword=None, num_titles=None
         print(f"Error fetching news: {e}")
         return ""
 
+def save_ticker_auto(ticker, date = 720):
+    start_date = (datetime.now() - timedelta(days=date)).strftime('%Y-%m-%d')
+    end_date = datetime.now().strftime('%Y-%m-%d')
+    folder_path = create_folder_path(ticker)
+    comp_file_path = os.path.join(folder_path, f'{ticker}_etf.csv')
+    data = save_history_data(ticker, start_date, end_date, comp_file_path)
+    return data
+
 # ETFデータを保存する関数
 def save_history_data(ticker, start_date, end_date, file_path):
+    if os.path.exists(file_path):
+        data = load_etf_data(file_path)
+        return data
+
     etf = yf.Ticker(ticker)
     hist = etf.history(start=start_date, end=end_date)
     hist = hist.reset_index()
@@ -449,6 +462,61 @@ def read_news_from_csv(file_path, encoding='utf-8', ticker=None):
         print(f"Error reading CSV file: {e}")
     return "\n".join(news_list)
 
+
+def get_industry_tickers(ticker_symbol):
+    try:
+        # Tickerオブジェクトを作成
+        ticker = Ticker(ticker_symbol)
+        
+        # summary_profileを取得
+        summary_profile = ticker.summary_profile.get(ticker_symbol)
+        
+        if not isinstance(summary_profile, dict):
+            raise ValueError(f"Invalid data format for {ticker_symbol}: {summary_profile}")
+        
+        # 業界とセクターを取得
+        industry = summary_profile.get('industry', 'N/A')
+        sector = summary_profile.get('sector', 'N/A')
+        
+        print(f"業界: {industry}, セクター: {sector}")
+        return industry, sector
+    
+    except Exception as e:
+        print(f"{ticker_symbol} のデータ取得中にエラーが発生しました: {e}")
+        return None, None
+
+# TODO: finviz eliteで取得
+def get_top_3_stocks_by_industry_and_sector(industry, sector):
+    try:
+        # Yahoo Financeのスクリーナーを使って同じ業界とセクターに属する銘柄を取得
+        screener = Ticker(screen=True)
+        screener_data = screener.summary_profile
+
+        # 業界とセクターが一致する銘柄を選定
+        industry_sector_stocks = [symbol for symbol, data in screener_data.items() 
+                                  if data.get('industry') == industry and data.get('sector') == sector]
+        
+        # 銘柄ごとにリターンを計算し、その値でランキング
+        stock_performance = {}
+        for symbol in industry_sector_stocks:
+            try:
+                ticker = Ticker(symbol)
+                data = ticker.history(period="1y")
+                if data.empty:
+                    continue
+                stock_return = data['adjclose'].pct_change().cumsum().iloc[-1]
+                stock_performance[symbol] = stock_return
+            except:
+                continue
+        
+        # トップ3の銘柄を取得
+        top_3_stocks = sorted(stock_performance.items(), key=lambda x: x[1], reverse=True)[:3]
+        return [symbol for symbol, _ in top_3_stocks]
+    
+    except Exception as e:
+        print(f"業界内の銘柄取得中にエラーが発生しました: {e}")
+        return []
+
 # 取っ手なしカップ型を検出する関数
 def detect_cup_without_handle(data, window=20):
     # ローリングウィンドウで最小値を検出（カップの底）
@@ -479,29 +547,150 @@ def convert_to_weekly(data):
     
     return weekly_data
 
+def filter_can_slim(ticker):
+    ticker = yf.Ticker(ticker)
+    
+    all_conditions_met = True
+
+    # C (Current Quarterly Earnings and Sales): 四半期EPS成長を確認
+    quarterly_earnings = ticker.quarterly_earnings
+    if quarterly_earnings is not None and not quarterly_earnings.empty:
+        # 四半期ごとのEPS成長率を計算し、25%以上の成長かを確認
+        quarterly_growth_found = False
+        for i in range(1, len(quarterly_earnings)):
+            growth_rate = (quarterly_earnings['Earnings'][i] - quarterly_earnings['Earnings'][i-1]) / abs(quarterly_earnings['Earnings'][i-1]) * 100
+            if growth_rate > 25:
+                quarterly_growth_found = True
+                # print(f"四半期EPS成長率が25%以上検出されました: {growth_rate:.2f}%")
+                break
+        if not quarterly_growth_found:
+            print("四半期EPS成長率が25%以上ではありません。")
+            all_conditions_met = False
+    else:
+        print("四半期EPSデータがありません。")
+        # all_conditions_met = False
+
+    # A (Annual Earnings Increases): 年間EPSの成長を確認
+    income_statement = ticker.income_stmt
+    if income_statement is not None and not income_statement.empty:
+        annual_growth_found = False
+        annual_earnings = income_statement.loc['Net Income']
+        # 年間EPS成長率を計算し、25%以上かどうかを確認
+        for i in range(1, len(annual_earnings)):
+            growth_rate = (annual_earnings[i] - annual_earnings[i-1]) / abs(annual_earnings[i-1]) * 100
+            if growth_rate > 25:
+                annual_growth_found = True
+                # print(f"年間EPS成長率が25%以上検出されました: {growth_rate:.2f}%")
+                break
+        if not annual_growth_found:
+            print("年間EPS成長率が25%以上ではありません。")
+            all_conditions_met = False
+    else:
+        print("年間EPSデータがありません。")
+        # all_conditions_met = False
+
+    # N (New Products, Management, or Conditions): 最近のニュースから新製品や経営の変化をチェック
+    news = ticker.news
+    if news is not None:
+        new_product_or_management = False
+        recent_weeks = pd.Timestamp.now() - pd.Timedelta(weeks=2)
+        for item in news:
+            news_date = pd.to_datetime(item['providerPublishTime'], unit='s')
+            if news_date > recent_weeks:
+                if not new_product_or_management: 
+                    print(f"新製品または経営の変化に関するニュースが見つかりました")
+                print(f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}")
+                new_product_or_management = True
+        if not new_product_or_management:
+            print("新製品または経営の変化に関するニュースが見つかりませんでした。")
+            all_conditions_met = False
+    else:
+        print("ニュースデータがありません。")
+        all_conditions_met = False
+
+    # S (Supply and Demand): 過去1年の出来高データを取得して、最近の増加を確認
+    historical_data = ticker.history(period="1y")
+    if not historical_data.empty:
+        volume_data = historical_data['Volume']
+        recent_max_volume = volume_data[-4:].max()  # 直近4週間の最大出来高
+        average_volume = volume_data.mean()
+
+        print(f"直近の最大出来高: {recent_max_volume}")
+        print(f"平均出来高: {average_volume}")
+
+        # 出来高が増加しているか確認
+        if recent_max_volume <= 1.05 * average_volume:
+            print("出来高の増加が十分ではありません。")
+            all_conditions_met = False
+        else:
+            print("出来高の大幅な増加が確認されました。")
+            # 機関投資家の活動の可能性を間接的に評価
+            if recent_max_volume > 1.2 * average_volume:
+                print("直近の出来高が大幅に増加しており、機関投資家の購入の可能性があります。")
+    else:
+        print("過去1年の出来高データがありません。")
+        all_conditions_met = False
+
+    # L (Leader or Laggard): 業界リーダーを判断するための指標（ROEやNet Profit Margin）を取得
+    financials = ticker.financials
+    if financials is not None:
+        # TODO: 業界内でのリーダーかどうかを確認するロジックを追加
+        print("業界リーダーを判断するための財務情報がありました。")
+        # print("業界リーダーを判断するための財務情報:", financials)
+    else:
+        print("財務データがありません。")
+        # all_conditions_met = False
+
+    # I (Institutional Sponsorship): 機関投資家の直近の動向をチェック
+    try: 
+        institutional_holders = ticker.institutional_holders
+        if institutional_holders is not None and not institutional_holders.empty:
+            # Date Reportedで直近のデータを絞り込む
+            institutional_holders['Date Reported'] = pd.to_datetime(institutional_holders['Date Reported'])
+            recent_date = pd.Timestamp.now() - pd.Timedelta(weeks=8)  # 直近8週間以内のデータを使用
+            recent_data = institutional_holders[institutional_holders['Date Reported'] > recent_date]
+            if not recent_data.empty and any(recent_data['Shares'] > 0):
+                print(recent_data)
+                print("機関投資家が直近で株を購入しています。")
+            else:
+                print("機関投資家の直近での購入が見当たりませんでした。")
+                # print(institutional_holders)
+                # all_conditions_met = False
+        else:
+            print("機関投資家の保有データがありません。")
+            # all_conditions_met = False
+    except Exception as e:
+        print(f"Error institutional_holders: {e}")
+
+    # M (Market Direction): 市場全体のトレンドを確認（S&P500とダウ平均）
+    # sp500 = yf.Ticker('^GSPC')
+    # sp500_data = sp500.history(period="6mo")  # 過去6ヶ月のS&P500データを取得
+    # dow = yf.Ticker('^DJI')
+    # dow_data = dow.history(period="6mo")  # 過去6ヶ月のダウ平均データを取得
+    # if not sp500_data.empty and not dow_data.empty:
+    #     # TODO: 市場全体が上昇トレンドにあるかどうかを判断するロジックを追加
+    #     print(sp500_data, dow_data)
+
+    return all_conditions_met
+
 # 過去データから売買価格を決定（上方チャネルラインを計算）
 def get_buy_sell_price(ticker, date = 720):
-    # 過去データを取得
-    start_date = (datetime.now() - timedelta(days=date)).strftime('%Y-%m-%d')
-    end_date = datetime.now().strftime('%Y-%m-%d')
+    data = save_ticker_auto(ticker, date)
+    sp500_data = save_ticker_auto('^DJI', date)
+    dow_data = save_ticker_auto('^GSPC', date)
     folder_path = create_folder_path(ticker)
-    comp_file_path = os.path.join(folder_path, f'{ticker}_etf.csv')
-    if os.path.exists(comp_file_path):
-        data = load_etf_data(comp_file_path)
-    else:
-        data = save_history_data(ticker, start_date, end_date, comp_file_path)
 
     # 買い価格を決定
     get_buy_price(data, folder_path)
 
     # 売り価格を決定
-    get_sell_price(data)
+    get_sell_price(data, sp500_data, dow_data, image_folder = folder_path)
 
     # 損切価格を決定
     # get_buy_price(data)
 
-def get_buy_price(data, image_folder=None, is_cup_with_handle=False, is_saucer_with_handle=False, is_double_bottom=False
-                  , is_flat_base=True, is_ascending_base=False, is_consolidation=False, is_vcp=False):
+def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=False
+                  , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=False):
     if is_cup_with_handle:
         weekly_data = convert_to_weekly(data_filter(data, 180))
         pattern_found, purchase_price, left_peak, cup_bottom, right_peak = util_can_slim_type.detect_cup_with_handle(weekly_data, image_folder=image_folder)
@@ -526,17 +715,17 @@ def get_buy_price(data, image_folder=None, is_cup_with_handle=False, is_saucer_w
         if pattern_found:
             print(f"取っ手付きソーサー型が検出されました。購入価格は {purchase_price} です。")
 
-    if is_flat_base:
-        weekly_data = convert_to_weekly(data_filter(data, 60))
-        pattern_found, purchase_price = util_can_slim_type.detect_flat_base(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"フラットベース型が検出されました。購入価格は {purchase_price} です。")
+    # if is_flat_base:
+    #     weekly_data = convert_to_weekly(data_filter(data, 60))
+    #     pattern_found, purchase_price = util_can_slim_type.detect_flat_base(weekly_data, image_folder=image_folder)
+    #     if pattern_found:
+    #         print(f"フラットベース型が検出されました。購入価格は {purchase_price} です。")
 
-    if is_ascending_base:
-        weekly_data = convert_to_weekly(data_filter(data, 180))
-        pattern_found, purchase_price = util_can_slim_type.detect_ascending_base(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"上昇トライアングル型が検出されました。購入価格は {purchase_price} です。")
+    # if is_ascending_base:
+    #     weekly_data = convert_to_weekly(data_filter(data, 180))
+    #     pattern_found, purchase_price = util_can_slim_type.detect_ascending_base(weekly_data, image_folder=image_folder)
+    #     if pattern_found:
+    #         print(f"上昇トライアングル型が検出されました。購入価格は {purchase_price} です。")
 
     # is_cup_without_handle, left, bottom, right = util_can_slim_type.detect_cup_without_handle(data)
     # if is_cup_without_handle:
@@ -544,5 +733,49 @@ def get_buy_price(data, image_folder=None, is_cup_with_handle=False, is_saucer_w
     #     buy_price = calculate_buy_price(data, right)
     #     print(f"推奨購入価格: {buy_price:.2f}")
 
-def get_sell_price(data, date = 360):
-    util_can_slim_type.detect_upper_channel_line(data)
+def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_channel_line=True, is_climax_top=True, is_exhaustion_gap=True,
+                    is_railroad_tracks=True, is_double_top=True, is_market_downtrend=True, is_moving_average_break=False):
+
+    if is_market_downtrend:
+        weekly_data = convert_to_weekly(data_filter(data, 180))
+        weekly_sp500_data = convert_to_weekly(data_filter(sp500_data, 180))
+        weekly_dow_data = convert_to_weekly(data_filter(dow_data, 180))
+        signal, price = util_can_slim_type.detect_market_downtrend(weekly_data, dow_data=weekly_dow_data, sp500_data=weekly_sp500_data, image_folder=image_folder)
+        if signal:
+            print(f"市場全体の下降トレンドが検出されました。売り価格は {price} です。")
+
+    if is_moving_average_break:
+        weekly_data = convert_to_weekly(data_filter(data, 200))
+        signal, price = util_can_slim_type.detect_moving_average_break(weekly_data, image_folder=image_folder)
+        if signal:
+            print(f"移動平均線を下回りました。売り価格は {price} です。")
+
+    if is_upper_channel_line:
+        weekly_data = convert_to_weekly(data_filter(data, 365))
+        signal, price = util_can_slim_type.detect_upper_channel_line(weekly_data, image_folder=image_folder)
+        if signal:
+            print(f"上方チャネルラインの売りシグナルが検出されました。売り価格は {price} です。")
+
+    if is_climax_top:
+        weekly_data = convert_to_weekly(data_filter(data, 90))
+        signal, price = util_can_slim_type.detect_climax_top(weekly_data, image_folder=image_folder)
+        if signal:
+            print(f"クライマックストップの売りシグナルが検出されました。売り価格は {price} です。")
+
+    # if is_exhaustion_gap:
+    #     weekly_data = convert_to_weekly(data_filter(data, 90))
+    #     signal, price = util_can_slim_type.detect_exhaustion_gap(weekly_data, image_folder=image_folder)
+    #     if signal:
+    #         print(f"イグゾーストキャップの売りシグナルが検出されました。売り価格は {price} です。")
+
+    # if is_double_top:
+    #     weekly_data = convert_to_weekly(data_filter(data, 180))
+    #     signal, price = util_can_slim_type.detect_double_top(weekly_data, image_folder=image_folder)
+    #     if signal:
+    #         print(f"ダブルトップの売りシグナルが検出されました。売り価格は {price} です。")
+
+    # if is_railroad_tracks:
+    #     weekly_data = convert_to_weekly(data_filter(data, 90))
+    #     signal, price = util_can_slim_type.detect_railroad_tracks(weekly_data, image_folder=image_folder)
+    #     if signal:
+    #         print(f"レールロードトラックの売りシグナルが検出されました。売り価格は {price} です。")

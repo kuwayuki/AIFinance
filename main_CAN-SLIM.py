@@ -9,7 +9,7 @@ import output_csv
 # プロンプトをインポート
 from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
-tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['AAPL']  # 複数ティッカーをカンマ区切りで受け取る
+tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['RLX']  # 複数ティッカーをカンマ区切りで受け取る
 folder_path = ''
 
 def main(tickers):
@@ -39,7 +39,15 @@ def filter_can_slim(tickers):
 
 def get_buy_sell_prices(tickers):
     for ticker in tickers:
-        utils.get_buy_sell_price(ticker)
+        # industry, sector = utils.get_industry_tickers(ticker)
+        # if industry and sector:
+        #     top_3_stocks = utils.get_top_3_stocks_by_industry_and_sector(industry, sector)
+        #     # top_3_stocks = utils.get_top_3_stocks_by_industry_and_sector(industry, sector)
+        #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
+        if not utils.filter_can_slim(ticker):
+            print("CAN-SLIMの条件を満たしません")
+        else:
+            utils.get_buy_sell_price(ticker)
         # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
 
 if __name__ == "__main__":
