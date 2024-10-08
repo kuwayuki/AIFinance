@@ -34,7 +34,6 @@ def filter_can_slim(tickers):
         # news=utils.read_news_from_csv('./csv/news_data.csv'),
         research=utils.read_news_from_csv(file_path, 'shift_jis', "ALL"),
     )
-    print(prompt)
     return utils.get_ai_opinion(prompt, PROMPT_CAN_SLIM_SYSTEM)
 
 def get_buy_sell_prices(tickers):
@@ -44,11 +43,13 @@ def get_buy_sell_prices(tickers):
         #     top_3_stocks = utils.get_top_3_stocks_by_industry_and_sector(industry, sector)
         #     # top_3_stocks = utils.get_top_3_stocks_by_industry_and_sector(industry, sector)
         #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
-        if not utils.filter_can_slim(ticker):
-            print("CAN-SLIMの条件を満たしません")
-            # continue
-
         utils.get_buy_sell_price(ticker)
+        # score, failed_conditions = utils.filter_can_slim(ticker)
+        # print(f"評価：{score}/{score + failed_conditions}点")
+        # if score > 1:
+        #     utils.get_buy_sell_price(ticker)
+        # else:
+        #     print(f"評価が低いので確認しません。")
         # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
 
 if __name__ == "__main__":

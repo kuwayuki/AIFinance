@@ -247,9 +247,7 @@ def data_filter_index(data, days=None):
     return data
 
 # AIの意見を取得
-def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE):
-    # print(prompt)
-
+def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE, is_print = True):
     # gpt-4o-2024-08-06 or o1-preview
     if GPT_MODEL != "o1-preview":
         response = openai.chat.completions.create(
@@ -261,7 +259,10 @@ def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE):
             model=GPT_MODEL,
             messages=[{"role": "user", "content": prompt}])
     print(response.usage)
-    return response.choices[0].message.content
+    result = response.choices[0].message.content
+    if is_print:
+        print(result)
+    return result
 
 def send_line_notify(notification_message):
     line_notify_token = 'Z392GKtaICiiiSndtfrKqDmYliv8df5S9AIekyPpSoa'
@@ -557,7 +558,8 @@ def convert_to_weekly(data):
 def filter_can_slim(ticker):
     ticker = yf.Ticker(ticker)
     
-    all_conditions_met = True
+    score = 0
+    failed_conditions = 0
 
     # C (Current Quarterly Earnings and Sales): 四半期EPS成長を確認
     quarterly_earnings = ticker.quarterly_earnings
@@ -568,14 +570,15 @@ def filter_can_slim(ticker):
             growth_rate = (quarterly_earnings['Earnings'][i] - quarterly_earnings['Earnings'][i-1]) / abs(quarterly_earnings['Earnings'][i-1]) * 100
             if growth_rate > 25:
                 quarterly_growth_found = True
-                # print(f"四半期EPS成長率が25%以上検出されました: {growth_rate:.2f}%")
                 break
-        if not quarterly_growth_found:
-            print("四半期EPS成長率が25%以上ではありません。")
-            all_conditions_met = False
+        if quarterly_growth_found:
+            score += 1
+        else:
+            print("C：四半期EPS成長率が25%以上ではありません。")
+            failed_conditions += 1
     else:
-        print("四半期EPSデータがありません。")
-        # all_conditions_met = False
+        print("C：四半期EPSデータがありません。")
+        failed_conditions += 1
 
     # A (Annual Earnings Increases): 年間EPSの成長を確認
     income_statement = ticker.income_stmt
@@ -587,14 +590,16 @@ def filter_can_slim(ticker):
             growth_rate = (annual_earnings[i] - annual_earnings[i-1]) / abs(annual_earnings[i-1]) * 100
             if growth_rate > 25:
                 annual_growth_found = True
-                # print(f"年間EPS成長率が25%以上検出されました: {growth_rate:.2f}%")
                 break
-        if not annual_growth_found:
-            print("年間EPS成長率が25%以上ではありません。")
-            all_conditions_met = False
+        if annual_growth_found:
+            print("A：年間EPS成長率が25%以上です。")
+            score += 1
+        else:
+            print("A：年間EPS成長率が25%以上ではありません。")
+            failed_conditions += 1
     else:
-        print("年間EPSデータがありません。")
-        # all_conditions_met = False
+        print("A：年間EPSデータがありません。")
+        failed_conditions += 1
 
     # N (New Products, Management, or Conditions): 最近のニュースから新製品や経営の変化をチェック
     news = ticker.news
@@ -605,19 +610,20 @@ def filter_can_slim(ticker):
         for item in news:
             news_date = pd.to_datetime(item['providerPublishTime'], unit='s')
             if news_date > recent_weeks:
-                if len(news_list) == 0: 
-                    print(f"新製品または経営の変化に関するニュースが見つかりました")
                 news = f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}"
                 print(news)
                 news_list.append(news)
                 new_product_or_management = True
 
-        if not new_product_or_management or not is_new_news("\n".join(news_list)):
-            print("新製品または経営の変化に関するニュースが見つかりませんでした。")
-            all_conditions_met = False
+        if new_product_or_management and is_new_news("\n".join(news_list)):
+            print(f"新製品または経営の変化に関するニュースが見つかりました")
+            score += 1
+        else:
+            print("N：新製品または経営の変化に関するニュースが見つかりませんでした。")
+            failed_conditions += 1
     else:
-        print("ニュースデータがありません。")
-        all_conditions_met = False
+        print("N：ニュースデータがありません。")
+        failed_conditions += 1
 
     # S (Supply and Demand): 過去1年の出来高データを取得して、最近の増加を確認
     historical_data = ticker.history(period="1y")
@@ -626,63 +632,79 @@ def filter_can_slim(ticker):
         recent_max_volume = volume_data[-4:].max()  # 直近4週間の最大出来高
         average_volume = volume_data.mean()
 
-        print(f"直近の最大出来高: {recent_max_volume}")
-        print(f"平均出来高: {average_volume}")
-
         # 出来高が増加しているか確認
-        if recent_max_volume <= 1.05 * average_volume:
-            print("出来高の増加が十分ではありません。")
-            all_conditions_met = False
-        else:
-            print("出来高の大幅な増加が確認されました。")
+        if recent_max_volume > 1.05 * average_volume:
+            score += 1
+            print("S：出来高の増加が確認されました。")
             # 機関投資家の活動の可能性を間接的に評価
             if recent_max_volume > 1.2 * average_volume:
-                print("直近の出来高が大幅に増加しており、機関投資家の購入の可能性があります。")
+                print("S：直近の出来高が大幅に増加しています。")
+        else:
+            print("S：出来高の増加が十分ではありません。直近の最大出来高: {recent_max_volume} 平均出来高: {average_volume}")
+            failed_conditions += 1
     else:
-        print("過去1年の出来高データがありません。")
-        all_conditions_met = False
+        print("S：過去1年の出来高データがありません。")
+        failed_conditions += 1
 
     # L (Leader or Laggard): 業界リーダーを判断するための指標（ROEやNet Profit Margin）を取得
-    # financials = ticker.financials
-    # if financials is not None:
-
     if is_leader(ticker):
-        print("業界リーダーになりうるとAIが判断します")
+        print("L：業界リーダーになりうるとAIが判断します")
+        score += 1
     else:
-        print("業界リーダーとAIが判断しません")
-        # all_conditions_met = False
+        print("L：業界リーダーとAIが判断しません")
+        failed_conditions += 1
 
     # I (Institutional Sponsorship): 機関投資家の直近の動向をチェック
-    try: 
-        institutional_holders = ticker.institutional_holders
-        if institutional_holders is not None and not institutional_holders.empty:
-            # Date Reportedで直近のデータを絞り込む
-            institutional_holders['Date Reported'] = pd.to_datetime(institutional_holders['Date Reported'])
-            recent_date = pd.Timestamp.now() - pd.Timedelta(weeks=8)  # 直近8週間以内のデータを使用
-            recent_data = institutional_holders[institutional_holders['Date Reported'] > recent_date]
-            if not recent_data.empty and any(recent_data['Shares'] > 0):
-                print(recent_data)
-                print("機関投資家が直近で株を購入しています。")
+    retries = 0
+    max_retries = 3
+    while retries < max_retries:
+        try: 
+            institutional_holders = ticker.institutional_holders
+            if institutional_holders is not None and not institutional_holders.empty:
+                # Date Reportedで直近のデータを絞り込む
+                institutional_holders['Date Reported'] = pd.to_datetime(institutional_holders['Date Reported'])
+                recent_date = pd.Timestamp.now() - pd.Timedelta(weeks=8)  # 直近8週間以内のデータを使用
+                recent_data = institutional_holders[institutional_holders['Date Reported'] > recent_date]
+                if not recent_data.empty and any(recent_data['Shares'] > 0):
+                    print("I：機関投資家が直近で株を購入しています。")
+                    score += 1
+                    break
+                else:
+                    print("I：機関投資家の直近での購入が見当たりませんでした。")
+                    print(institutional_holders)
+                    failed_conditions += 1
+                    break
             else:
-                print("機関投資家の直近での購入が見当たりませんでした。")
-                # print(institutional_holders)
-                # all_conditions_met = False
-        else:
-            print("機関投資家の保有データがありません。")
-            # all_conditions_met = False
-    except Exception as e:
-        print(f"Error institutional_holders: {e}")
+                print("I：機関投資家の保有データがありません。")
+                failed_conditions += 1
+                break
+        except Exception as e:
+            print(f"I：Error institutional_holders: {e} 再試行します... ({retries + 1}/{max_retries})")
+            retries += 1
+            time.sleep(2)  # 2秒待ってから再試行
+
+    if retries == max_retries:
+        print("I：最大試行回数に達しました。データを取得できませんでした。")
+        failed_conditions += 1
 
     # M (Market Direction): 市場全体のトレンドを確認（S&P500とダウ平均）
-    # sp500 = yf.Ticker('^GSPC')
-    # sp500_data = sp500.history(period="6mo")  # 過去6ヶ月のS&P500データを取得
-    # dow = yf.Ticker('^DJI')
-    # dow_data = dow.history(period="6mo")  # 過去6ヶ月のダウ平均データを取得
-    # if not sp500_data.empty and not dow_data.empty:
-    #     # TODO: 市場全体が上昇トレンドにあるかどうかを判断するロジックを追加
-    #     print(sp500_data, dow_data)
+    dow_data = save_ticker_auto('^GSPC')
+    weekly_dow_data = convert_to_weekly(data_filter_date(dow_data, 180))
+    dow_uptrend = util_can_slim_type.is_trend(weekly_dow_data, trend_type="uptrend")
 
-    return all_conditions_met
+    sp500_data = save_ticker_auto('^DJI')
+    weekly_sp500_data = convert_to_weekly(data_filter_date(sp500_data, 180))
+    sp500_uptrend = util_can_slim_type.is_trend(weekly_sp500_data, trend_type="uptrend")
+
+    if dow_uptrend or sp500_uptrend:
+        if dow_uptrend: score += 0.5
+        if sp500_uptrend: score += 0.5
+        print("M：市場全体が上昇トレンドです")
+    else:
+        failed_conditions += 1
+        print("M：市場全体が上昇トレンドではありません")
+
+    return score, failed_conditions
 
 def is_new_news(news_list):
     prompt = PROMPT_USER["NEW_PRODUCT"].format(
@@ -714,41 +736,40 @@ def get_buy_sell_price(ticker, date = 720):
     # 損切価格を決定
     # get_buy_price(data)
 
-def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=False
-                  , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=False):
+def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=True
+                  , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=True):
     if is_cup_with_handle:
         weekly_data = convert_to_weekly(data_filter_date(data, 180))
-        print(weekly_data)
         pattern_found, purchase_price, left_peak, cup_bottom, right_peak = util_can_slim_type.detect_cup_with_handle(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"取っ手付きカップ型が検出されました。購入価格は {purchase_price} です。")
 
     if is_double_bottom:
-        weekly_data = convert_to_weekly(data_filter_index(data, 180))
+        weekly_data = convert_to_weekly(data_filter_date(data, 180))
         pattern_found, purchase_price, first_bottom, second_bottom = util_can_slim_type.detect_double_bottom(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"ダブルボトム型が検出されました。購入価格は {purchase_price} です。")
 
     if is_vcp:
-        weekly_data = convert_to_weekly(data_filter_index(data, 180))
+        weekly_data = convert_to_weekly(data_filter_date(data, 180))
         pattern_found, purchase_price = util_can_slim_type.detect_vcp(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"VCPパターンが検出されました。購入価格は {purchase_price} です。")
 
     if is_saucer_with_handle:
-        weekly_data = convert_to_weekly(data_filter_index(data, 360))
+        weekly_data = convert_to_weekly(data_filter_date(data, 360))
         pattern_found, purchase_price, left_peak, saucer_bottom, right_peak = util_can_slim_type.detect_saucer_with_handle(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"取っ手付きソーサー型が検出されました。購入価格は {purchase_price} です。")
 
     # if is_flat_base:
-    #     weekly_data = convert_to_weekly(data_filter(data, 60))
+    #     weekly_data = convert_to_weekly(data_filter_date(data, 60))
     #     pattern_found, purchase_price = util_can_slim_type.detect_flat_base(weekly_data, image_folder=image_folder)
     #     if pattern_found:
     #         print(f"フラットベース型が検出されました。購入価格は {purchase_price} です。")
 
     # if is_ascending_base:
-    #     weekly_data = convert_to_weekly(data_filter(data, 180))
+    #     weekly_data = convert_to_weekly(data_filter_date(data, 180))
     #     pattern_found, purchase_price = util_can_slim_type.detect_ascending_base(weekly_data, image_folder=image_folder)
     #     if pattern_found:
     #         print(f"上昇トライアングル型が検出されました。購入価格は {purchase_price} です。")

@@ -39,6 +39,7 @@ def plot_pattern(data, points, lines, title, image_name, image_folder):
     else:
         plt.show()
 
+# OK!!
 def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
     # 高値の局所的な極大を検出（カップの両側）
     max_idx = argrelextrema(data['Close'].values, np.greater, order=window)[0]
@@ -287,6 +288,7 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
     else:
         return False, None, None, None, None
 
+# OK!!
 def detect_double_bottom(data, window=2, image_folder=None):
     # 局所的な極小値（ボトム）を検出
     min_idx = argrelextrema(data['Close'].values, np.less, order=window)[0]
@@ -316,7 +318,7 @@ def detect_double_bottom(data, window=2, image_folder=None):
         ]
         lines = [
             {'y': neckline, 'label': 'Neckline', 'color': 'orange', 'linestyle': '--'},
-            {'y': purchase_price, 'label': 'Purchase Price', 'color': 'purple', 'linestyle': '--'}
+            {'y': purchase_price, 'label': 'Purchase Price(Neckline x 1.02)', 'color': 'purple', 'linestyle': '--'}
         ]
 
         # 共通のプロット関数を呼び出す
@@ -432,11 +434,14 @@ def detect_vcp(data, window_sizes=[60, 40, 20, 10], image_folder=None):
         recent_data = data[-window:]
         volatility = recent_data['Close'].std() / recent_data['Close'].mean()
         volatilities.append(volatility)
+        print(f"Window: {window}, Volatility: {volatility:.4f}")
 
     # ボラティリティが縮小しているか確認
     if all(x > y for x, y in zip(volatilities, volatilities[1:])):
+        print("ボラティリティが縮小しています。VCPの条件を満たしています。")
         recent_high = data['Close'][-10:].max()
         purchase_price = recent_high * 1.02  # 高値の2%上
+        print(f"Recent High: {recent_high:.2f}, Purchase Price: {purchase_price:.2f}")
 
         # プロット用のラインを準備
         points = []
@@ -457,8 +462,8 @@ def detect_vcp(data, window_sizes=[60, 40, 20, 10], image_folder=None):
 
         return True, purchase_price
     else:
+        print("ボラティリティが縮小していません。VCPの条件を満たしていません。")
         return False, None
-
 
 def calculate_buy_price(data, right_peak, buffer_percent=1.02):
     # 右ピークの価格を取得し、購入価格を計算（例: 右ピークの価格を2%上回る）
@@ -466,21 +471,28 @@ def calculate_buy_price(data, right_peak, buffer_percent=1.02):
     buy_price = right_peak_price * buffer_percent
     return buy_price
 
-def detect_market_downtrend(data, dow_data, sp500_data, ma_period=25, threshold=0.03, image_folder=None):
-    def is_downtrend(index_data):
-        # 移動平均を計算
-        moving_average = index_data['Close'].rolling(window=ma_period).mean()
-        # 最新の価格と移動平均を取得
-        latest_price = index_data['Close'].iloc[-1]
-        ma_value = moving_average.iloc[-1]
-        # 移動平均線が継続して下向きかどうかを確認（過去5期間の傾きをチェック）
-        ma_slope = moving_average.diff().iloc[-5:]
-        # 最新の価格が移動平均より一定割合下であり、移動平均線が過去5期間で一貫して下向きであれば下降トレンドと判断
-        return latest_price < ma_value * (1 - threshold) and (ma_slope < 0).all()
+def is_trend(index_data, ma_period=25, threshold=0.03, trend_type='downtrend'):
+    # 移動平均を計算
+    moving_average = index_data['Close'].rolling(window=ma_period).mean()
+    # 最新の価格と移動平均を取得
+    latest_price = index_data['Close'].iloc[-1]
+    ma_value = moving_average.iloc[-1]
+    # 移動平均線の傾きを計算（過去5期間）
+    ma_slope = moving_average.diff().iloc[-5:]
     
+    if trend_type == 'downtrend':
+        # 下降トレンドの確認
+        return latest_price < ma_value * (1 - threshold) and (ma_slope < 0).all()
+    elif trend_type == 'uptrend':
+        # 上昇トレンドの確認
+        return latest_price > ma_value * (1 + threshold) and (ma_slope > 0).all()
+    else:
+        raise ValueError("trend_type must be either 'downtrend' or 'uptrend'")
+
+def detect_market_downtrend(data, dow_data, sp500_data, ma_period=25, threshold=0.03, image_folder=None):
     # ダウ平均とS&P500の下降トレンドを確認
-    dow_downtrend = is_downtrend(dow_data)
-    sp500_downtrend = is_downtrend(sp500_data)
+    dow_downtrend = is_trend(dow_data, ma_period, threshold)
+    sp500_downtrend = is_trend(sp500_data, ma_period, threshold)
 
     # どちらかが下降トレンドに入っていれば売りシグナルを出す
     if dow_downtrend or sp500_downtrend:
