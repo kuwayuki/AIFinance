@@ -17,10 +17,10 @@ def main(tickers):
     folder_path = utils.create_folder_path(','.join(tickers))
 
     # 1. CAN-SLIM法で選定された銘柄を配列指定
-    can_slim_tickers = tickers
     # can_slim_tickers = filter_can_slim(tickers)
+    can_slim_tickers = tickers
 
-    # 2. 上方チャネルラインから売買価格を判断
+    # 2. 各手法で売買価格を判断
     get_buy_sell_prices(can_slim_tickers)
 
 # CAN-SLIM法の銘柄から直近のニュースを考慮して銘柄を絞り込む
@@ -46,8 +46,9 @@ def get_buy_sell_prices(tickers):
         #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
         if not utils.filter_can_slim(ticker):
             print("CAN-SLIMの条件を満たしません")
-        else:
-            utils.get_buy_sell_price(ticker)
+            # continue
+
+        utils.get_buy_sell_price(ticker)
         # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
 
 if __name__ == "__main__":

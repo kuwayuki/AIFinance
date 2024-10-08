@@ -13,7 +13,7 @@ from newsapi import NewsApiClient
 import csv
 import sys
 import util_can_slim_type
-from prompts import PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT
+from prompts import PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT, PROMPT_SYSTEM, PROMPT_USER
 from scipy.stats import linregress
 from scipy.signal import argrelextrema
 import numpy as np
@@ -223,7 +223,21 @@ def load_etf_data(file_path):
     data = pd.read_csv(file_path, parse_dates=['Date'])
     return data
 
-def data_filter(data, days=None):
+def data_filter_date(data, days=None):
+    if days is not None:
+        # 現在の日付を取得
+        current_date = datetime.now()
+        
+        # Date列をdatetime形式に変換
+        data['Date'] = pd.to_datetime(data['Date'])
+        
+        # 指定された日数分のデータをフィルタリング（現在日時からdays日前以降）
+        start_date = current_date - timedelta(days=days)
+        data = data[data['Date'] >= start_date].reset_index(drop=True)
+    
+    return data
+
+def data_filter_index(data, days=None):
     if days is not None:
         # 日付でソートして最新のデータが一番下になるように
         data = data.sort_values(by='Date', ascending=True).reset_index(drop=True)
@@ -465,19 +479,12 @@ def read_news_from_csv(file_path, encoding='utf-8', ticker=None):
 
 def get_industry_tickers(ticker_symbol):
     try:
-        # Tickerオブジェクトを作成
-        ticker = Ticker(ticker_symbol)
-        
-        # summary_profileを取得
-        summary_profile = ticker.summary_profile.get(ticker_symbol)
-        
-        if not isinstance(summary_profile, dict):
-            raise ValueError(f"Invalid data format for {ticker_symbol}: {summary_profile}")
-        
-        # 業界とセクターを取得
-        industry = summary_profile.get('industry', 'N/A')
-        sector = summary_profile.get('sector', 'N/A')
-        
+        ticker = yf.Ticker(ticker_symbol)
+        info = ticker.info
+
+        industry = info.get('industry', 'N/A')
+        sector = info.get('sector', 'N/A')
+
         print(f"業界: {industry}, セクター: {sector}")
         return industry, sector
     
@@ -594,14 +601,18 @@ def filter_can_slim(ticker):
     if news is not None:
         new_product_or_management = False
         recent_weeks = pd.Timestamp.now() - pd.Timedelta(weeks=2)
+        news_list = []
         for item in news:
             news_date = pd.to_datetime(item['providerPublishTime'], unit='s')
             if news_date > recent_weeks:
-                if not new_product_or_management: 
+                if len(news_list) == 0: 
                     print(f"新製品または経営の変化に関するニュースが見つかりました")
-                print(f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}")
+                news = f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}"
+                print(news)
+                news_list.append(news)
                 new_product_or_management = True
-        if not new_product_or_management:
+
+        if not new_product_or_management or not is_new_news("\n".join(news_list)):
             print("新製品または経営の変化に関するニュースが見つかりませんでした。")
             all_conditions_met = False
     else:
@@ -632,13 +643,13 @@ def filter_can_slim(ticker):
         all_conditions_met = False
 
     # L (Leader or Laggard): 業界リーダーを判断するための指標（ROEやNet Profit Margin）を取得
-    financials = ticker.financials
-    if financials is not None:
-        # TODO: 業界内でのリーダーかどうかを確認するロジックを追加
-        print("業界リーダーを判断するための財務情報がありました。")
-        # print("業界リーダーを判断するための財務情報:", financials)
+    # financials = ticker.financials
+    # if financials is not None:
+
+    if is_leader(ticker):
+        print("業界リーダーになりうるとAIが判断します")
     else:
-        print("財務データがありません。")
+        print("業界リーダーとAIが判断しません")
         # all_conditions_met = False
 
     # I (Institutional Sponsorship): 機関投資家の直近の動向をチェック
@@ -673,6 +684,20 @@ def filter_can_slim(ticker):
 
     return all_conditions_met
 
+def is_new_news(news_list):
+    prompt = PROMPT_USER["NEW_PRODUCT"].format(
+        product=news_list,
+    )
+    response = get_ai_opinion(prompt, PROMPT_SYSTEM["IS_TRUE"])
+    return response
+
+def is_leader(ticker):
+    prompt = PROMPT_USER["LEADER"].format(
+        ticker=ticker,
+    )
+    response = get_ai_opinion(prompt, PROMPT_SYSTEM["IS_TRUE"])
+    return response
+
 # 過去データから売買価格を決定（上方チャネルラインを計算）
 def get_buy_sell_price(ticker, date = 720):
     data = save_ticker_auto(ticker, date)
@@ -692,25 +717,26 @@ def get_buy_sell_price(ticker, date = 720):
 def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=False
                   , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=False):
     if is_cup_with_handle:
-        weekly_data = convert_to_weekly(data_filter(data, 180))
+        weekly_data = convert_to_weekly(data_filter_date(data, 180))
+        print(weekly_data)
         pattern_found, purchase_price, left_peak, cup_bottom, right_peak = util_can_slim_type.detect_cup_with_handle(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"取っ手付きカップ型が検出されました。購入価格は {purchase_price} です。")
 
     if is_double_bottom:
-        weekly_data = convert_to_weekly(data_filter(data, 180))
+        weekly_data = convert_to_weekly(data_filter_index(data, 180))
         pattern_found, purchase_price, first_bottom, second_bottom = util_can_slim_type.detect_double_bottom(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"ダブルボトム型が検出されました。購入価格は {purchase_price} です。")
 
     if is_vcp:
-        weekly_data = convert_to_weekly(data_filter(data, 180))
+        weekly_data = convert_to_weekly(data_filter_index(data, 180))
         pattern_found, purchase_price = util_can_slim_type.detect_vcp(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"VCPパターンが検出されました。購入価格は {purchase_price} です。")
 
     if is_saucer_with_handle:
-        weekly_data = convert_to_weekly(data_filter(data, 360))
+        weekly_data = convert_to_weekly(data_filter_index(data, 360))
         pattern_found, purchase_price, left_peak, saucer_bottom, right_peak = util_can_slim_type.detect_saucer_with_handle(weekly_data, image_folder=image_folder)
         if pattern_found:
             print(f"取っ手付きソーサー型が検出されました。購入価格は {purchase_price} です。")
@@ -737,27 +763,27 @@ def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_chann
                     is_railroad_tracks=True, is_double_top=True, is_market_downtrend=True, is_moving_average_break=False):
 
     if is_market_downtrend:
-        weekly_data = convert_to_weekly(data_filter(data, 180))
-        weekly_sp500_data = convert_to_weekly(data_filter(sp500_data, 180))
-        weekly_dow_data = convert_to_weekly(data_filter(dow_data, 180))
+        weekly_data = convert_to_weekly(data_filter_index(data, 180))
+        weekly_sp500_data = convert_to_weekly(data_filter_index(sp500_data, 180))
+        weekly_dow_data = convert_to_weekly(data_filter_index(dow_data, 180))
         signal, price = util_can_slim_type.detect_market_downtrend(weekly_data, dow_data=weekly_dow_data, sp500_data=weekly_sp500_data, image_folder=image_folder)
         if signal:
             print(f"市場全体の下降トレンドが検出されました。売り価格は {price} です。")
 
     if is_moving_average_break:
-        weekly_data = convert_to_weekly(data_filter(data, 200))
+        weekly_data = convert_to_weekly(data_filter_index(data, 200))
         signal, price = util_can_slim_type.detect_moving_average_break(weekly_data, image_folder=image_folder)
         if signal:
             print(f"移動平均線を下回りました。売り価格は {price} です。")
 
     if is_upper_channel_line:
-        weekly_data = convert_to_weekly(data_filter(data, 365))
+        weekly_data = convert_to_weekly(data_filter_index(data, 365))
         signal, price = util_can_slim_type.detect_upper_channel_line(weekly_data, image_folder=image_folder)
         if signal:
             print(f"上方チャネルラインの売りシグナルが検出されました。売り価格は {price} です。")
 
     if is_climax_top:
-        weekly_data = convert_to_weekly(data_filter(data, 90))
+        weekly_data = convert_to_weekly(data_filter_index(data, 90))
         signal, price = util_can_slim_type.detect_climax_top(weekly_data, image_folder=image_folder)
         if signal:
             print(f"クライマックストップの売りシグナルが検出されました。売り価格は {price} です。")
