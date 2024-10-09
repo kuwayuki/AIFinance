@@ -727,6 +727,9 @@ def get_buy_sell_price(ticker, date = 720):
     dow_data = save_ticker_auto('^GSPC', date)
     folder_path = create_folder_path(ticker)
 
+    # ベースグラフを作成
+    create_plot_pattern(data, folder_path)
+
     # 買い価格を決定
     get_buy_price(data, folder_path)
 
@@ -735,6 +738,15 @@ def get_buy_sell_price(ticker, date = 720):
 
     # 損切価格を決定
     # get_buy_price(data)
+
+
+def create_plot_pattern(data, image_folder=None):
+    # ベースの図を作成
+    util_can_slim_type.plot_pattern(data=data, title='day', image_name='0_base_day.png', image_folder=image_folder)
+
+    # ベースの図を作成
+    weekly_data = convert_to_weekly(data)
+    util_can_slim_type.plot_pattern(data=weekly_data, title='week', image_name='0_base_week.png', image_folder=image_folder)
 
 def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=True
                   , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=True):

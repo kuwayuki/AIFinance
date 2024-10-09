@@ -1,29 +1,28 @@
-import yfinance as yf
-import pandas as pd
 import matplotlib.pyplot as plt
 import os
-from datetime import datetime, timedelta
 from scipy.stats import linregress
 from scipy.signal import argrelextrema
 import numpy as np
 
-def plot_pattern(data, points, lines, title, image_name, image_folder):
+def plot_pattern(data, title, image_name, image_folder, points=None, lines=None):
     plt.figure(figsize=(12, 6))
     plt.plot(data['Close'], label='Close Price')
 
     # ポイントをプロット
-    for point in points:
-        plt.scatter(data.index[point['index']], data['Close'].iloc[point['index']],
-                    color=point['color'], label=point['label'])
+    if points is not None:
+        for point in points:
+            plt.scatter(data.index[point['index']], data['Close'].iloc[point['index']],
+                        color=point['color'], label=point['label'])
 
-   # ラインをプロット
-    for line in lines:
-        if 'x' in line:
-            # x が指定されている場合は plt.plot を使用
-            plt.plot(line['x'], line['y'], color=line['color'], linestyle=line['linestyle'], label=line['label'])
-        else:
-            # 水平線の場合は plt.axhline を使用
-            plt.axhline(y=line['y'], color=line['color'], linestyle=line['linestyle'], label=line['label'])
+    # ラインをプロット
+    if lines is not None:
+        for line in lines:
+            if 'x' in line:
+                # x が指定されている場合は plt.plot を使用
+                plt.plot(line['x'], line['y'], color=line['color'], linestyle=line['linestyle'], label=line['label'])
+            else:
+                # 水平線の場合は plt.axhline を使用
+                plt.axhline(y=line['y'], color=line['color'], linestyle=line['linestyle'], label=line['label'])
 
     plt.legend()
     plt.title(title)
@@ -216,15 +215,16 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
             {'index': saucer_bottom, 'label': 'Saucer Bottom', 'color': 'r'},
             {'index': right_peak, 'label': 'Right Peak', 'color': 'g'}
         ]
+        
         # 取っ手部分の開始点を設定（ソーサーの右ピークから軽い調整部分）
         handle_start_candidates = min_idx[min_idx > right_peak]
         if len(handle_start_candidates) == 0:
             print("取っ手部分の開始点が見つかりません。")
             return False, None, None, None, None
-        else:
-            handle_start = handle_start_candidates[0]
-            handle_end = len(data) - 1  # データの最終インデックスを終了点とする
-
+        
+        handle_start = handle_start_candidates[0]
+        handle_end = len(data) - 1  # 初期の期間をデータの最終インデックスに設定
+        while handle_start < handle_end:
             # 取っ手部分のデータを取得
             handle_data = data.iloc[handle_start:handle_end + 1]
 
@@ -235,34 +235,40 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
             handle_min_price = handle_data['Close'].min()
             if handle_min_price >= data['Close'].values[right_peak]:
                 print("取っ手部分の下降が確認できません。パターンを無効とします。")
-                # return False, None, None, None, None
+                handle_start += 5
+                continue
 
             # 最新ソーサーの右高値からその後の最小値の下降が5%の範囲にあるかを確認
             right_peak_price = data['Close'].values[right_peak]
             handle_depth = (right_peak_price - handle_min_price) / right_peak_price * 100
             if handle_depth > 5:
                 print(f"取っ手部分の下降が5%の範囲外です: {handle_depth:.2f}%")
-                # return False, None, None, None, None
+                handle_start += 5
+                continue
 
             # 取っ手部分の傾きが急でないか（緩やかであることを確認）
             handle_slope = (handle_data['Close'].iloc[-1] - handle_data['Close'].iloc[0]) / len(handle_data)
             if handle_slope < 0 or handle_slope > abs(data['Close'].values[right_peak] - handle_min_price) / len(handle_data):
                 print("取っ手部分の傾きが緩やかではありません。パターンを無効とします。")
-                # return False, None, None, None, None
+                handle_start += 5
+                continue
 
-            # 購入価格はソーサーの右側のピーク（取っ手の上限）に設定
-            purchase_price = data['Close'].values[right_peak]
-            lines = [
-                {'y': purchase_price, 'label': 'Purchase Price', 'color': 'purple', 'linestyle': '--'}
-            ]
-            # 取っ手部分のラインを追加
-            lines.append({
-                'x': [data.index[handle_start], data.index[handle_end]],
-                'y': [data['Close'].iloc[handle_start], data['Close'].iloc[handle_end]],
-                'label': 'Handle',
-                'color': 'cyan',
-                'linestyle': '-'
-            })
+            # 条件に合致した場合は終了
+            break
+
+        # 購入価格はソーサーの右側のピーク（取っ手の上限）に設定
+        purchase_price = data['Close'].values[right_peak]
+        lines = [
+            {'y': purchase_price, 'label': 'Purchase Price', 'color': 'purple', 'linestyle': '--'}
+        ]
+        # 取っ手部分のラインを追加
+        lines.append({
+            'x': [data.index[handle_start], data.index[handle_end]],
+            'y': [data['Close'].iloc[handle_start], data['Close'].iloc[handle_end]],
+            'label': 'Handle',
+            'color': 'cyan',
+            'linestyle': '-'
+        })
 
         # max_idx の他の局所的極大値も追加（色を区別）
         for idx in max_idx:
