@@ -529,34 +529,34 @@ def detect_moving_average_break(data, ma_period=50, threshold=0.05, image_folder
     else:
         print(f"移動平均線を下回っていませんので、売りは保留です。")
         return False, None
-
-def detect_climax_top(data, window=4, image_folder=None):
-    latest_high = data['Close'].iloc[-1]
-    latest_low = data['Close'].iloc[-1]
-    recent_volume = data['Volume'][-window:]
-    max_volume = recent_volume.max()
-    latest_volume = recent_volume.iloc[-1]
+# OK!
+def detect_climax_top(data, window=4, threshold=0.3, image_folder=None):
+    latest_high = data['Close'].iloc[-1]  # 最新の高値
+    latest_low = data['Close'].iloc[-2]  # 最新の1個前の安値
+    recent_volume = data['Volume'].iloc[-1]  # 最新の出来高
+    max_volume = data['Volume'].max()  # 全範囲の最大出来高
     
     # プロット用のポイントとラインを準備
     points = [
         {'index': data.index.get_loc(data['Close'][-window:].idxmin()), 'label': 'Latest Low', 'color': 'blue'},
         {'index': data.index.get_loc(data['Close'][-window:].idxmax()), 'label': 'Latest High', 'color': 'red'},
-        {'index': data.index.get_loc(recent_volume.idxmax()), 'label': 'Max Volume', 'color': 'orange'}
+        {'index': data.index.get_loc(data['Volume'].idxmax()), 'label': 'Max Volume', 'color': 'orange'}
     ]
     lines = [
         {'y': latest_high, 'label': 'Latest High', 'color': 'red', 'linestyle': '--'},
         {'y': latest_low, 'label': 'Latest Low', 'color': 'blue', 'linestyle': '--'}
     ]
     
-    # TODO: 後で場所を変更
-    plot_pattern(data=data, points=points, lines=lines, title='Climax Top', image_name='climax_top.png', image_folder=image_folder)
-
+    # 最近で上昇を続けていることを確認
+    is_recently_rising = data['Close'].iloc[-window:].is_monotonic_increasing
+    
     # 30%以上の急上昇を確認し、最大の陽線（出来高の急増）を確認
-    if (latest_high - latest_low) / latest_low > 0.3 and latest_volume >= max_volume * 1.2:  # 出来高が最大出来高の1.2倍以上
+    if is_recently_rising and (latest_high - latest_low) / latest_low > threshold and recent_volume >= max_volume * 0.9:  # 出来高が最大出来高
         sell_price = latest_high * 0.95  # 高値からの5%下で売り
-        
+        plot_pattern(data=data, points=points, lines=lines, title='Climax Top', image_name='climax_top.png', image_folder=image_folder)
         return True, sell_price
     else:
+        print(f"クライマックストップ：最大の陽線と出来高は確認できませんでした。")
         return False, None
 
 def detect_exhaustion_gap(data, image_folder=None):
@@ -613,8 +613,9 @@ def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_fol
     latest_high_indices, latest_high_values = find_high_points(high_indices, high_values, [], [])
     
     # 傾きが負でないか確認
-    if len(latest_high_indices) == 3:
-        slope, intercept, _, _, _ = linregress(latest_high_indices, latest_high_values)
+    if len(latest_high_indices) >= 2:
+        # 右から1個目と2個目の点を結ぶ直線を計算
+        slope, intercept, _, _, _ = linregress(latest_high_indices[-2:], latest_high_values[-2:])
         if slope <= 0:
             print(f"上方チャネルライン：下降向きです")
             return False, None
