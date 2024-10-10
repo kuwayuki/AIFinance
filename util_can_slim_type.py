@@ -579,49 +579,38 @@ def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_fol
     high_indices = argrelextrema(data['Close'].values, np.greater, order=window)[0]
     high_values = data['Close'].iloc[high_indices]
     
-    # 最初の点はここ1ヵ月の高めな点
-    latest_high_indices = [high_indices[-1]]
-    latest_high_values = [high_values.iloc[-1]]
-    
-    # 2つ目の点は最初の点より前の日付にある点
-    for i in range(len(high_indices) - 2, -1, -1):
-        potential_index = high_indices[i]
-        potential_value = high_values.iloc[i]
+    def find_high_points(high_indices, high_values, latest_high_indices, latest_high_values):
+        # ベースケース: 3つの高値が見つかった場合
+        if len(latest_high_indices) == 3:
+            return latest_high_indices, latest_high_values
+
+        # 最初の点はここ1ヶ月の高めな点
+        if len(latest_high_indices) == 0:
+            latest_high_indices = [high_indices[-1]]
+            latest_high_values = [high_values.iloc[-1]]
         
-        # 2つ目の点を結んだら下降ラインだったら取り直し
-        slope, intercept, _, _, _ = linregress([potential_index, latest_high_indices[0]], [potential_value, latest_high_values[0]])
-        if slope <= 0:
-            continue
+        # 次の点を探す
+        for i in range(len(high_indices) - len(latest_high_indices) - 1, -1, -1):
+            potential_index = high_indices[i]
+            potential_value = high_values.iloc[i]
+
+            # 既存の最新の点と新しい点を結んだとき、傾きが負ならスキップ
+            slope, intercept, _, _, _ = linregress([potential_index, latest_high_indices[0]], [potential_value, latest_high_values[0]])
+            if slope <= 0:
+                continue
+
+            # 線上により高い値があるか確認
+            if all(data['Close'].iloc[potential_index + 1:latest_high_indices[0]] <= (slope * np.arange(potential_index + 1, latest_high_indices[0]) + intercept)):
+                # 新しい点を追加
+                latest_high_indices.insert(0, potential_index)
+                latest_high_values.insert(0, potential_value)
+                return find_high_points(high_indices, high_values, latest_high_indices, latest_high_values)
         
-        # 最初の点と結んだ線上にさらに高い値があるか確認
-        for j in range(potential_index + 1, latest_high_indices[0]):
-            if data['Close'].iloc[j] > (slope * j + intercept):
-                break
-        else:
-            # 2つ目の点を採用
-            latest_high_indices.insert(0, potential_index)
-            latest_high_values.insert(0, potential_value)
-            break
-    
-    # 3つ目の点の選定
-    for i in range(len(high_indices) - 3, -1, -1):
-        potential_index = high_indices[i]
-        potential_value = high_values.iloc[i]
-        
-        # 3つ目の点を結んだら下降ラインだったら取り直し
-        slope, intercept, _, _, _ = linregress([potential_index, latest_high_indices[0]], [potential_value, latest_high_values[0]])
-        if slope <= 0:
-            continue
-        
-        # 最初と2つ目の点を結んだ線にデータのラインがぶつかっていないか確認
-        for j in range(potential_index + 1, latest_high_indices[0]):
-            if data['Close'].iloc[j] > (slope * j + intercept):
-                break
-        else:
-            # 3つ目の点を採用
-            latest_high_indices.insert(0, potential_index)
-            latest_high_values.insert(0, potential_value)
-            break
+        # 再帰の深さを制限するため、再帰を中断して終了する
+        return latest_high_indices, latest_high_values
+
+    # 最高値が3つ以上ある場合に再帰的に3つの点を探す
+    latest_high_indices, latest_high_values = find_high_points(high_indices, high_values, [], [])
     
     # 傾きが負でないか確認
     if len(latest_high_indices) == 3:
@@ -629,6 +618,9 @@ def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_fol
         if slope <= 0:
             print(f"上方チャネルライン：下降向きです")
             return False, None
+    else:
+        print(f"上方チャネルラインの点が不足しています")
+        return False, None
     
     # 数値インデックスを使用して上方チャネルラインを計算
     numeric_indices = np.arange(len(data))
@@ -653,7 +645,7 @@ def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_fol
         return True, latest_price
     else:
         return False, latest_price
-    
+
 def detect_double_top(data, window=10, image_folder=None):
     """
     ダブルトップを使用して売りシグナルを検出する関数。
