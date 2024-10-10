@@ -434,16 +434,17 @@ def detect_consolidation(data, period=30, tolerance=0.05, image_folder=None):
     else:
         return False, None
 
-def detect_vcp(data, window_sizes=[60, 40, 20, 10], image_folder=None):
+# OK!window_sizesは修正する可能性あり。
+def detect_vcp(data, window_sizes=[24, 16, 8, 2], image_folder=None):
     volatilities = []
     for window in window_sizes:
         recent_data = data[-window:]
         volatility = recent_data['Close'].std() / recent_data['Close'].mean()
         volatilities.append(volatility)
-        print(f"Window: {window}, Volatility: {volatility:.4f}")
+        # print(f"Window: {window}, Volatility: {volatility:.4f}")
 
     # ボラティリティが縮小しているか確認
-    if all(x > y for x, y in zip(volatilities, volatilities[1:])):
+    if all(round(x, 4) >= round(y, 4) for x, y in zip(volatilities, volatilities[1:])):
         print("ボラティリティが縮小しています。VCPの条件を満たしています。")
         recent_high = data['Close'][-10:].max()
         purchase_price = recent_high * 1.02  # 高値の2%上
@@ -506,6 +507,7 @@ def detect_market_downtrend(data, dow_data, sp500_data, ma_period=25, threshold=
         plot_pattern(data=data, title='Market Downtrend', image_name='market_downtrend.png', image_folder=image_folder)
         return True, data['Close'].iloc[-1]
     else:
+        print(f"市場全体は下降トレンドではありませんので、売りは保留です。")
         return False, None
 
 def detect_moving_average_break(data, ma_period=50, threshold=0.05, image_folder=None):
@@ -520,6 +522,7 @@ def detect_moving_average_break(data, ma_period=50, threshold=0.05, image_folder
         plot_pattern(data=data, title='Moving Average Break', image_name='moving_average_break.png', image_folder=image_folder)
         return True, latest_price
     else:
+        print(f"移動平均線を下回っていませんので、売りは保留です。")
         return False, None
 
 def detect_climax_top(data, window=4, image_folder=None):
@@ -540,8 +543,8 @@ def detect_climax_top(data, window=4, image_folder=None):
         {'y': latest_low, 'label': 'Latest Low', 'color': 'blue', 'linestyle': '--'}
     ]
     
+    # TODO: 後で場所を変更
     plot_pattern(data=data, points=points, lines=lines, title='Climax Top', image_name='climax_top.png', image_folder=image_folder)
-
 
     # 30%以上の急上昇を確認し、最大の陽線（出来高の急増）を確認
     if (latest_high - latest_low) / latest_low > 0.3 and latest_volume >= max_volume * 1.2:  # 出来高が最大出来高の1.2倍以上
@@ -578,7 +581,9 @@ def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_fol
         slope, intercept, _, _, _ = linregress(latest_high_indices, latest_high_values)
         # 傾きが負の場合はパターンを無効とする
         if slope <= 0:
-            return False, None
+            # TODO: 後で戻す
+            print(f"上方チャネルライン：下降向きです")
+            # return False, None
         numeric_indices = np.arange(len(data))  # インデックスを数値に変換
         upper_channel_line = slope * numeric_indices + intercept
     else:

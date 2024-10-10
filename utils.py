@@ -796,27 +796,27 @@ def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_chann
                     is_railroad_tracks=True, is_double_top=True, is_market_downtrend=True, is_moving_average_break=False):
 
     if is_market_downtrend:
-        weekly_data = convert_to_weekly(data_filter_index(data, 180))
+        weekly_data = convert_to_weekly(data_filter_date(data, 180))
         weekly_sp500_data = convert_to_weekly(data_filter_index(sp500_data, 180))
         weekly_dow_data = convert_to_weekly(data_filter_index(dow_data, 180))
         signal, price = util_can_slim_type.detect_market_downtrend(weekly_data, dow_data=weekly_dow_data, sp500_data=weekly_sp500_data, image_folder=image_folder)
         if signal:
-            print(f"市場全体の下降トレンドが検出されました。売り価格は {price} です。")
+            print(f"市場全体の下降トレンドが検出されました。売り価格は成行： {price} です。")
 
     if is_moving_average_break:
-        weekly_data = convert_to_weekly(data_filter_index(data, 200))
+        weekly_data = convert_to_weekly(data_filter_date(data, 200))
         signal, price = util_can_slim_type.detect_moving_average_break(weekly_data, image_folder=image_folder)
         if signal:
-            print(f"移動平均線を下回りました。売り価格は {price} です。")
+            print(f"移動平均線を下回りました。売り価格は成行： {price} です。")
 
     if is_upper_channel_line:
-        weekly_data = convert_to_weekly(data_filter_index(data, 365))
+        weekly_data = convert_to_weekly(data_filter_date(data, 360))
         signal, price = util_can_slim_type.detect_upper_channel_line(weekly_data, image_folder=image_folder)
         if signal:
             print(f"上方チャネルラインの売りシグナルが検出されました。売り価格は {price} です。")
 
     if is_climax_top:
-        weekly_data = convert_to_weekly(data_filter_index(data, 90))
+        weekly_data = convert_to_weekly(data_filter_date(data, 90))
         signal, price = util_can_slim_type.detect_climax_top(weekly_data, image_folder=image_folder)
         if signal:
             print(f"クライマックストップの売りシグナルが検出されました。売り価格は {price} です。")
