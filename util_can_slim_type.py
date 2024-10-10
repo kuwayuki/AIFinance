@@ -16,13 +16,18 @@ def plot_pattern(data, title, image_name, image_folder, points=None, lines=None)
 
     # ラインをプロット
     if lines is not None:
+        data_min = data['Close'].min()
         for line in lines:
             if 'x' in line:
-                # x が指定されている場合は plt.plot を使用
-                plt.plot(line['x'], line['y'], color=line['color'], linestyle=line['linestyle'], label=line['label'])
+                # x が指定されている場合、最小値以上の部分のみプロット
+                x_filtered = [x for x, y in zip(line['x'], line['y']) if y >= data_min]
+                y_filtered = [y for y in line['y'] if y >= data_min]
+                if x_filtered and y_filtered:
+                    plt.plot(x_filtered, y_filtered, color=line['color'], linestyle=line['linestyle'], label=line['label'])
             else:
-                # 水平線の場合は plt.axhline を使用
-                plt.axhline(y=line['y'], color=line['color'], linestyle=line['linestyle'], label=line['label'])
+                # 水平線の場合、dataの最小値より大きい場合のみ plt.axhline を使用
+                if line['y'] > data_min:
+                    plt.axhline(y=line['y'], color=line['color'], linestyle=line['linestyle'], label=line['label'])
 
     plt.legend()
     plt.title(title)
@@ -568,29 +573,68 @@ def detect_exhaustion_gap(data, image_folder=None):
     else:
         return False, None
 
+# JNJは2, 
 def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_folder=None):
     # 最高値のインデックスを取得
     high_indices = argrelextrema(data['Close'].values, np.greater, order=window)[0]
     high_values = data['Close'].iloc[high_indices]
     
-    # 最高値が3つ以上ある場合に最新の3つの高値を使って直線を引く
-    if len(high_values) >= 3:
-        latest_high_indices = high_indices[-3:]
-        latest_high_values = high_values[-3:]
-        # 線形回帰で3つの最新高値を結ぶ
-        slope, intercept, _, _, _ = linregress(latest_high_indices, latest_high_values)
-        # 傾きが負の場合はパターンを無効とする
+    # 最初の点はここ1ヵ月の高めな点
+    latest_high_indices = [high_indices[-1]]
+    latest_high_values = [high_values.iloc[-1]]
+    
+    # 2つ目の点は最初の点より前の日付にある点
+    for i in range(len(high_indices) - 2, -1, -1):
+        potential_index = high_indices[i]
+        potential_value = high_values.iloc[i]
+        
+        # 2つ目の点を結んだら下降ラインだったら取り直し
+        slope, intercept, _, _, _ = linregress([potential_index, latest_high_indices[0]], [potential_value, latest_high_values[0]])
         if slope <= 0:
-            # TODO: 後で戻す
+            continue
+        
+        # 最初の点と結んだ線上にさらに高い値があるか確認
+        for j in range(potential_index + 1, latest_high_indices[0]):
+            if data['Close'].iloc[j] > (slope * j + intercept):
+                break
+        else:
+            # 2つ目の点を採用
+            latest_high_indices.insert(0, potential_index)
+            latest_high_values.insert(0, potential_value)
+            break
+    
+    # 3つ目の点の選定
+    for i in range(len(high_indices) - 3, -1, -1):
+        potential_index = high_indices[i]
+        potential_value = high_values.iloc[i]
+        
+        # 3つ目の点を結んだら下降ラインだったら取り直し
+        slope, intercept, _, _, _ = linregress([potential_index, latest_high_indices[0]], [potential_value, latest_high_values[0]])
+        if slope <= 0:
+            continue
+        
+        # 最初と2つ目の点を結んだ線にデータのラインがぶつかっていないか確認
+        for j in range(potential_index + 1, latest_high_indices[0]):
+            if data['Close'].iloc[j] > (slope * j + intercept):
+                break
+        else:
+            # 3つ目の点を採用
+            latest_high_indices.insert(0, potential_index)
+            latest_high_values.insert(0, potential_value)
+            break
+    
+    # 傾きが負でないか確認
+    if len(latest_high_indices) == 3:
+        slope, intercept, _, _, _ = linregress(latest_high_indices, latest_high_values)
+        if slope <= 0:
             print(f"上方チャネルライン：下降向きです")
-            # return False, None
-        numeric_indices = np.arange(len(data))  # インデックスを数値に変換
-        upper_channel_line = slope * numeric_indices + intercept
-    else:
-        rolling_mean = data['Close'].rolling(window=window).mean()
-        rolling_std = data['Close'].rolling(window=window).std()
-        upper_channel_line = rolling_mean + (rolling_std * channel_multiplier)
+            return False, None
+    
+    # 数値インデックスを使用して上方チャネルラインを計算
+    numeric_indices = np.arange(len(data))
+    upper_channel_line = slope * numeric_indices + intercept
 
+    # 最新の価格と上方チャネルラインの価格を比較
     latest_price = data['Close'].iloc[-1]
     upper_line_price = upper_channel_line[-1]
 
@@ -609,7 +653,7 @@ def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_fol
         return True, latest_price
     else:
         return False, latest_price
-
+    
 def detect_double_top(data, window=10, image_folder=None):
     """
     ダブルトップを使用して売りシグナルを検出する関数。

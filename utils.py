@@ -838,3 +838,6 @@ def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_chann
     #     signal, price = util_can_slim_type.detect_railroad_tracks(weekly_data, image_folder=image_folder)
     #     if signal:
     #         print(f"レールロードトラックの売りシグナルが検出されました。売り価格は {price} です。")
+
+def sample():
+    print("sample")
