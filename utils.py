@@ -751,95 +751,103 @@ def create_plot_pattern(data, image_folder=None):
 def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=True
                   , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=True):
     print(f"☆買い価格を確認：開始☆")
-    if is_cup_with_handle:
-        weekly_data = convert_to_weekly(data_filter_date(data, 180))
-        pattern_found, purchase_price, left_peak, cup_bottom, right_peak = util_can_slim_type.detect_cup_with_handle(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"取っ手付きカップ型が検出されました。購入価格は {purchase_price} です。")
+    try:
+        if is_cup_with_handle:
+            weekly_data = convert_to_weekly(data_filter_date(data, 180))
+            pattern_found, purchase_price, left_peak, cup_bottom, right_peak = util_can_slim_type.detect_cup_with_handle(weekly_data, image_folder=image_folder)
+            if pattern_found:
+                print(f"取っ手付きカップ型が検出されました。購入価格は {purchase_price} です。")
 
-    if is_double_bottom:
-        weekly_data = convert_to_weekly(data_filter_date(data, 180))
-        pattern_found, purchase_price, first_bottom, second_bottom = util_can_slim_type.detect_double_bottom(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"ダブルボトム型が検出されました。購入価格は {purchase_price} です。")
+        if is_double_bottom:
+            weekly_data = convert_to_weekly(data_filter_date(data, 180))
+            pattern_found, purchase_price, first_bottom, second_bottom = util_can_slim_type.detect_double_bottom(weekly_data, image_folder=image_folder)
+            if pattern_found:
+                print(f"ダブルボトム型が検出されました。購入価格は {purchase_price} です。")
 
-    if is_vcp:
-        weekly_data = convert_to_weekly(data_filter_date(data, 180))
-        pattern_found, purchase_price = util_can_slim_type.detect_vcp(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"VCPパターンが検出されました。購入価格は {purchase_price} です。")
+        if is_vcp:
+            weekly_data = convert_to_weekly(data_filter_date(data, 180))
+            pattern_found, purchase_price = util_can_slim_type.detect_vcp(weekly_data, image_folder=image_folder)
+            if pattern_found:
+                print(f"VCPパターンが検出されました。購入価格は {purchase_price} です。")
 
-    if is_saucer_with_handle:
-        weekly_data = convert_to_weekly(data_filter_date(data, 360))
-        pattern_found, purchase_price, left_peak, saucer_bottom, right_peak = util_can_slim_type.detect_saucer_with_handle(weekly_data, image_folder=image_folder)
-        if pattern_found:
-            print(f"取っ手付きソーサー型が検出されました。購入価格は {purchase_price} です。")
+        if is_saucer_with_handle:
+            weekly_data = convert_to_weekly(data_filter_date(data, 360))
+            pattern_found, purchase_price, left_peak, saucer_bottom, right_peak = util_can_slim_type.detect_saucer_with_handle(weekly_data, image_folder=image_folder)
+            if pattern_found:
+                print(f"取っ手付きソーサー型が検出されました。購入価格は {purchase_price} です。")
 
-    # if is_flat_base:
-    #     weekly_data = convert_to_weekly(data_filter_date(data, 60))
-    #     pattern_found, purchase_price = util_can_slim_type.detect_flat_base(weekly_data, image_folder=image_folder)
-    #     if pattern_found:
-    #         print(f"フラットベース型が検出されました。購入価格は {purchase_price} です。")
+        # if is_flat_base:
+        #     weekly_data = convert_to_weekly(data_filter_date(data, 60))
+        #     pattern_found, purchase_price = util_can_slim_type.detect_flat_base(weekly_data, image_folder=image_folder)
+        #     if pattern_found:
+        #         print(f"フラットベース型が検出されました。購入価格は {purchase_price} です。")
 
-    # if is_ascending_base:
-    #     weekly_data = convert_to_weekly(data_filter_date(data, 180))
-    #     pattern_found, purchase_price = util_can_slim_type.detect_ascending_base(weekly_data, image_folder=image_folder)
-    #     if pattern_found:
-    #         print(f"上昇トライアングル型が検出されました。購入価格は {purchase_price} です。")
+        # if is_ascending_base:
+        #     weekly_data = convert_to_weekly(data_filter_date(data, 180))
+        #     pattern_found, purchase_price = util_can_slim_type.detect_ascending_base(weekly_data, image_folder=image_folder)
+        #     if pattern_found:
+        #         print(f"上昇トライアングル型が検出されました。購入価格は {purchase_price} です。")
 
-    # is_cup_without_handle, left, bottom, right = util_can_slim_type.detect_cup_without_handle(data)
-    # if is_cup_without_handle:
-    #     print(f"取っ手なしカップ型検出: 左ピーク={left}, カップ底={bottom}, 右ピーク={right}")
-    #     buy_price = calculate_buy_price(data, right)
-    #     print(f"推奨購入価格: {buy_price:.2f}")
+        # is_cup_without_handle, left, bottom, right = util_can_slim_type.detect_cup_without_handle(data)
+        # if is_cup_without_handle:
+        #     print(f"取っ手なしカップ型検出: 左ピーク={left}, カップ底={bottom}, 右ピーク={right}")
+        #     buy_price = calculate_buy_price(data, right)
+        #     print(f"推奨購入価格: {buy_price:.2f}")
+    except Exception as e:
+        print(e)
+
     print(f"☆買い価格を確認：終了☆")
 
 def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_channel_line=True, is_climax_top=True, is_exhaustion_gap=True,
                     is_railroad_tracks=True, is_double_top=True, is_market_downtrend=True, is_moving_average_break=False):
     print(f"☆売り価格を確認：開始☆")
-    if is_market_downtrend:
-        weekly_data = convert_to_weekly(data_filter_date(data, 180))
-        weekly_sp500_data = convert_to_weekly(data_filter_index(sp500_data, 180))
-        weekly_dow_data = convert_to_weekly(data_filter_index(dow_data, 180))
-        signal, price = util_can_slim_type.detect_market_downtrend(weekly_data, dow_data=weekly_dow_data, sp500_data=weekly_sp500_data, image_folder=image_folder)
-        if signal:
-            print(f"市場全体の下降トレンドが検出されました。売り価格は成行： {price} です。")
+    try:
+        if is_market_downtrend:
+            weekly_data = convert_to_weekly(data_filter_date(data, 180))
+            weekly_sp500_data = convert_to_weekly(data_filter_index(sp500_data, 180))
+            weekly_dow_data = convert_to_weekly(data_filter_index(dow_data, 180))
+            signal, price = util_can_slim_type.detect_market_downtrend(weekly_data, dow_data=weekly_dow_data, sp500_data=weekly_sp500_data, image_folder=image_folder)
+            if signal:
+                print(f"市場全体の下降トレンドが検出されました。売り価格は成行： {price} です。")
 
-    if is_moving_average_break:
-        weekly_data = convert_to_weekly(data_filter_date(data, 200))
-        signal, price = util_can_slim_type.detect_moving_average_break(weekly_data, image_folder=image_folder)
-        if signal:
-            print(f"移動平均線を下回りました。売り価格は成行： {price} です。")
+        if is_moving_average_break:
+            weekly_data = convert_to_weekly(data_filter_date(data, 200))
+            signal, price = util_can_slim_type.detect_moving_average_break(weekly_data, image_folder=image_folder)
+            if signal:
+                print(f"移動平均線を下回りました。売り価格は成行： {price} です。")
 
-    if is_upper_channel_line:
-        weekly_data = convert_to_weekly(data_filter_date(data, 360))
-        signal, price = util_can_slim_type.detect_upper_channel_line(weekly_data, image_folder=image_folder)
-        if signal:
-            print(f"上方チャネルラインの売りシグナルが検出されました。売り価格は成行： {price} です。")
+        if is_upper_channel_line:
+            weekly_data = convert_to_weekly(data_filter_date(data, 360))
+            signal, price = util_can_slim_type.detect_upper_channel_line(weekly_data, image_folder=image_folder)
+            if signal:
+                print(f"上方チャネルラインの売りシグナルが検出されました。売り価格は成行： {price} です。")
 
-    if is_climax_top:
-        weekly_data = convert_to_weekly(data_filter_date(data, 90))
-        signal, price = util_can_slim_type.detect_climax_top(weekly_data, image_folder=image_folder)
-        if signal:
-            print(f"クライマックストップの売りシグナルが検出されました。売り価格は成行： {price} です。")
+        if is_climax_top:
+            weekly_data = convert_to_weekly(data_filter_date(data, 90))
+            signal, price = util_can_slim_type.detect_climax_top(weekly_data, image_folder=image_folder)
+            if signal:
+                print(f"クライマックストップの売りシグナルが検出されました。売り価格は成行： {price} です。")
 
-    # if is_exhaustion_gap:
-    #     weekly_data = convert_to_weekly(data_filter(data, 90))
-    #     signal, price = util_can_slim_type.detect_exhaustion_gap(weekly_data, image_folder=image_folder)
-    #     if signal:
-    #         print(f"イグゾーストキャップの売りシグナルが検出されました。売り価格は {price} です。")
+        # if is_exhaustion_gap:
+        #     weekly_data = convert_to_weekly(data_filter(data, 90))
+        #     signal, price = util_can_slim_type.detect_exhaustion_gap(weekly_data, image_folder=image_folder)
+        #     if signal:
+        #         print(f"イグゾーストキャップの売りシグナルが検出されました。売り価格は {price} です。")
 
-    # if is_double_top:
-    #     weekly_data = convert_to_weekly(data_filter(data, 180))
-    #     signal, price = util_can_slim_type.detect_double_top(weekly_data, image_folder=image_folder)
-    #     if signal:
-    #         print(f"ダブルトップの売りシグナルが検出されました。売り価格は {price} です。")
+        # if is_double_top:
+        #     weekly_data = convert_to_weekly(data_filter(data, 180))
+        #     signal, price = util_can_slim_type.detect_double_top(weekly_data, image_folder=image_folder)
+        #     if signal:
+        #         print(f"ダブルトップの売りシグナルが検出されました。売り価格は {price} です。")
 
-    # if is_railroad_tracks:
-    #     weekly_data = convert_to_weekly(data_filter(data, 90))
-    #     signal, price = util_can_slim_type.detect_railroad_tracks(weekly_data, image_folder=image_folder)
-    #     if signal:
-    #         print(f"レールロードトラックの売りシグナルが検出されました。売り価格は {price} です。")
+        # if is_railroad_tracks:
+        #     weekly_data = convert_to_weekly(data_filter(data, 90))
+        #     signal, price = util_can_slim_type.detect_railroad_tracks(weekly_data, image_folder=image_folder)
+        #     if signal:
+        #         print(f"レールロードトラックの売りシグナルが検出されました。売り価格は {price} です。")
+    except Exception as e:
+        print(e)
+
     print(f"☆売り価格を確認：終了☆")
 
 def sample():

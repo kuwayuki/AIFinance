@@ -90,6 +90,7 @@ def future(ticker, is_include_history_data = False, is_grow = False, file_path =
     historical_section = ""
     if is_include_history_data:
         historical_data = utils.load_history_data(ticker, False)
+        historical_data = utils.data_filter_date(historical_data, HISTORY_DAYS)
         historical_section += f"\n過去{HISTORY_DAYS}日間のデータも考慮していますが、直近1ヶ月のデータには特に注目しています。"
         historical_section += f"\n{historical_data.to_string(index=False)}"
 
@@ -132,7 +133,9 @@ if __name__ == "__main__":
     is_future = sys.argv[2] == "FUTURE" if len(sys.argv) > 2 else False 
     is_grow = sys.argv[2] == "GROW" if len(sys.argv) > 2 else False 
     if is_future or is_grow:
-        get_news.main(use_latest_csv_date=True)
+        # TODO:トークン量がえげつないので一旦コメントアウト
+        # get_news.main(use_latest_csv_date=True)
+        print("トークン量がえげつないので一旦コメントアウト")
     else:
         # Google News
         soup = utils.fetch_news_soup(NEWS_URL)
