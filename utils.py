@@ -556,7 +556,74 @@ def convert_to_weekly(data):
     
     return weekly_data
 
+# keysがTimestampになっている部分を文字列に変換
+def convert_keys_to_str(d):
+    return {str(k): v for k, v in d.items()}
+
+def jsonOutput(data, title="", is_output=True):
+    try:
+        if data is None:
+            return None
+
+        if hasattr(data, 'to_dict'):
+            data = data.to_dict()
+            data = {str(k): convert_keys_to_str(v) for k, v in data.items()}
+        
+        if is_output:
+            output_log(title, True)
+            output_log(data, True)
+    except:
+        print('err')
+    return data
+
+def all_print(ticker):
+    etf = yf.Ticker(ticker)
+    # 基本情報
+    jsonOutput(etf.info, "基本情報（会社名、業界、株価など）")
+    
+    # 財務諸表
+    jsonOutput(etf.financials, "財務諸表")
+    jsonOutput(etf.balance_sheet, "バランスシート")
+    jsonOutput(etf.cashflow, "キャッシュフロー")
+    jsonOutput(etf.earnings, "収益情報")
+    
+    # 配当金と株式分割
+    jsonOutput(etf.dividends, "配当金情報")
+    jsonOutput(etf.splits, "株式分割情報")
+    
+    # サステナビリティ
+    jsonOutput(etf.sustainability, "サステナビリティスコア")
+    
+    # 推奨情報
+    jsonOutput(etf.recommendations, "アナリスト推奨")
+    jsonOutput(etf.recommendations_summary, "推奨サマリー")
+    
+    # 会社の予定
+    jsonOutput(etf.calendar, "会社の予定（カレンダー）")
+    
+    # 株式保有情報
+    jsonOutput(etf.major_holders, "主要株主")
+    jsonOutput(etf.institutional_holders, "機関投資家の保有株")
+    jsonOutput(etf.mutualfund_holders, "投資信託保有者")
+    
+    # ニュース
+    jsonOutput(etf.news, "最新ニュース")
+    
+    # オプション
+    jsonOutput(etf.options, "オプションの有効期限")
+    
+    # 追加の情報
+    jsonOutput(etf.earnings_dates, "収益日")
+    jsonOutput(etf.history_metadata, "履歴メタデータ")
+    # jsonOutput(etf.analyst_price_target, "アナリスト価格目標")
+    # jsonOutput(etf.revenue_forecasts, "収益予測")
+    # jsonOutput(etf.earnings_forecasts, "収益予測")
+    # jsonOutput(etf.earnings_trend, "収益トレンド")
+
 def filter_can_slim(ticker):
+
+    return all_print(ticker)
+
     output_log(f"\n☆☆CAN-SLIM評価を確認：開始☆☆")
     ticker = yf.Ticker(ticker)
     
@@ -566,21 +633,44 @@ def filter_can_slim(ticker):
     # C (Current Quarterly Earnings and Sales): 四半期EPS成長を確認
     quarterly_earnings = ticker.quarterly_earnings
     if quarterly_earnings is not None and not quarterly_earnings.empty:
-        # 四半期ごとのEPS成長率を計算し、25%以上の成長かを確認
-        quarterly_growth_found = False
+        # 四半期ごとのEPS成長率を計算し、25%以上の成長が複数回確認できるかをチェック
+        quarterly_growth_count = 0
+        latest_growth_rate = None
         for i in range(1, len(quarterly_earnings)):
             growth_rate = (quarterly_earnings['Earnings'][i] - quarterly_earnings['Earnings'][i-1]) / abs(quarterly_earnings['Earnings'][i-1]) * 100
             if growth_rate > 25:
-                quarterly_growth_found = True
-                break
-        if quarterly_growth_found:
+                quarterly_growth_count += 1
+            if i == len(quarterly_earnings) - 1:
+                latest_growth_rate = growth_rate
+        
+        if latest_growth_rate is not None and latest_growth_rate > 25 and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
             score += 1
         else:
-            output_log(f"C：四半期EPS成長率が25%以上ではありません。{growth_rate}%でした。")
+            output_log(f"C：四半期EPS成長率が25%以上の期間が足りませんでした。")
             failed_conditions += 1
     else:
-        output_log(f"C：四半期EPSデータがありません。")
-        failed_conditions += 1
+        output_log(f"C：四十期EPSデータがありません。年間EPSデータを代用します。")
+        # 年間EPSデータを代用
+        income_statement = ticker.income_stmt
+        if income_statement is not None and not income_statement.empty and 'EPS' in income_statement.index:
+            annual_earnings = income_statement.loc['EPS']
+            annual_growth_count = 0
+            latest_growth_rate = None
+            for i in range(1, len(annual_earnings)):
+                growth_rate = (annual_earnings[i] - annual_earnings[i-1]) / abs(annual_earnings[i-1]) * 100
+                if growth_rate > 25:
+                    annual_growth_count += 1
+                if i == len(annual_earnings) - 1:
+                    latest_growth_rate = growth_rate
+            
+            if latest_growth_rate is not None and latest_growth_rate > 25 and annual_growth_count >= 2:
+                score += 1
+            else:
+                output_log(f"C：年間EPS成長率が25%以上の期間が足りませんでした。")
+                failed_conditions += 1
+        else:
+            output_log(f"C：年間EPSデータがありません。")
+            failed_conditions += 1
 
     # A (Annual Earnings Increases): 年間EPSの成長を確認
     income_statement = ticker.income_stmt
@@ -861,13 +951,17 @@ def set_output_log_file_path(folder_name=None, file_name=None, is_time_str=False
 
     log_file_path = os.path.join(create_folder_path(folder_name), file_name)
 
-def output_log(message):
+def output_log(message, is_json = False):
     global log_file_path
-    print(message)
+    if is_json:
+        out_message = json.dumps(message, indent=4, ensure_ascii=False)
+    else:
+        out_message = str(message)
+    print(str(message))
     if log_file_path:
         try:
             with open(log_file_path, 'a', encoding='utf-8') as file:
-                file.write(message + '\n')
+                file.write(out_message + '\n')
         except Exception as e:
             print(f"ファイルの保存中にエラーが発生しました: {e}")
     return message
