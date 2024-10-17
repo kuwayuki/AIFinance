@@ -44,13 +44,20 @@ def get_buy_sell_prices(tickers):
         #     # top_3_stocks = utils.get_top_3_stocks_by_industry_and_sector(industry, sector)
         #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
         # utils.get_buy_sell_price(ticker)
-        score, failed_conditions = utils.filter_can_slim(ticker)
-        print(f"評価：{score}/{score + failed_conditions}点")
-        if score > 1:
-            utils.get_buy_sell_price(ticker)
-        else:
-            print(f"評価が低いので確認しません。")
-        # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
+        try:
+            utils.set_output_log_file_path(ticker, 'can_slim', True)
+            utils.output_log(f"\n★★★{ticker}★★★")
+
+            score, failed_conditions = utils.filter_can_slim(ticker)
+            if score > 5:
+                utils.get_buy_sell_price(ticker)
+            else:
+                utils.output_log(f"評価が低いので確認しません。")
+            # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
+
+        finally:
+            utils.send_line_log_text()
+            utils.set_output_log_file_path(is_clear=True)
 
 if __name__ == "__main__":
     main(tickers)

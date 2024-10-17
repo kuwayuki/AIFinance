@@ -101,7 +101,7 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
         # カップの底を選択
         cup_bottom_candidates = min_idx[(min_idx > left_peak) & (min_idx < right_peak)]
         if len(cup_bottom_candidates) == 0:
-            utils.output_log("カップの底が見つかりません。")
+            utils.output_log("取っ手付きカップ型：カップの底が見つかりません。")
             # return False, None, None, None, None
         cup_bottom = cup_bottom_candidates[np.argmin(data['Close'].values[cup_bottom_candidates])]
 
@@ -113,7 +113,7 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
         # 取っ手部分の開始点を設定（カップの右ピークから軽い調整部分）
         handle_start_candidates = min_idx[min_idx > right_peak]
         if len(handle_start_candidates) == 0:
-            utils.output_log("取っ手部分の開始点が見つかりません。")
+            utils.output_log("取っ手付きカップ型：取っ手部分の開始点が見つかりません。")
             # return False, None, None, None, None
         else:
             handle_start = handle_start_candidates[0]
@@ -123,25 +123,25 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
             handle_data = data.iloc[handle_start:handle_end + 1]
 
             if len(handle_data) < 2:
-                utils.output_log("取っ手部分が1週間未満です。パターンを無効とします。")
+                utils.output_log("取っ手付きカップ型：取っ手部分が1週間未満です。パターンを無効とします。")
                 # return False, None, None, None, None
 
             handle_min_price = handle_data['Close'].min()
             if handle_min_price >= data['Close'].values[right_peak]:
-                utils.output_log("取っ手部分の下降が確認できません。パターンを無効とします。")
+                utils.output_log("取っ手付きカップ型：取っ手部分の下降が確認できません。パターンを無効とします。")
                 # return False, None, None, None, None
 
             # 最新カップの右高値からその後の最小値の下降が12%の範囲にあるかを確認
             right_peak_price = data['Close'].values[right_peak]
             handle_depth = (right_peak_price - handle_min_price) / right_peak_price * 100
             if handle_depth > 12:
-                utils.output_log(f"取っ手部分の下降が12%の範囲外です: {handle_depth:.2f}%")
+                utils.output_log(f"取っ手付きカップ型：取っ手部分の下降が12%の範囲外です: {handle_depth:.2f}%")
                 # return False, None, None, None, None
 
             # 取っ手部分の傾きが急でないか（緩やかであることを確認）
             handle_slope = (handle_data['Close'].iloc[-1] - handle_data['Close'].iloc[0]) / len(handle_data)
             if handle_slope < 0 or handle_slope > abs(data['Close'].values[right_peak] - handle_min_price) / len(handle_data):
-                utils.output_log("取っ手部分の傾きが緩やかではありません。パターンを無効とします。")
+                utils.output_log("取っ手付きカップ型：取っ手部分の傾きが緩やかではありません。パターンを無効とします。")
                 return False, None, None, None, None
 
             # 購入価格はカップの右側のピーク（取っ手の上限）に設定
@@ -227,7 +227,7 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
         # ソーサーの底を選択
         saucer_bottom_candidates = min_idx[(min_idx > left_peak) & (min_idx < right_peak)]
         if len(saucer_bottom_candidates) == 0:
-            utils.output_log("ソーサーの底が見つかりません。")
+            utils.output_log("取っ手付きソーサー型：ソーサーの底が見つかりません。")
             return False, None, None, None, None
         saucer_bottom = saucer_bottom_candidates[np.argmin(data['Close'].values[saucer_bottom_candidates])]
 
@@ -240,7 +240,7 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
         # 取っ手部分の開始点を設定（ソーサーの右ピークから軽い調整部分）
         handle_start_candidates = min_idx[min_idx > right_peak]
         if len(handle_start_candidates) == 0:
-            utils.output_log("取っ手部分の開始点が見つかりません。")
+            utils.output_log("取っ手付きソーサー型：取っ手部分の開始点が見つかりません。")
             return False, None, None, None, None
         
         handle_start = handle_start_candidates[0]
@@ -250,12 +250,12 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
             handle_data = data.iloc[handle_start:handle_end + 1]
 
             if len(handle_data) < 2:
-                utils.output_log("取っ手部分が1週間未満です。パターンを無効とします。")
+                utils.output_log("取っ手付きソーサー型：取っ手部分が1週間未満です。パターンを無効とします。")
                 return False, None, None, None, None
 
             handle_min_price = handle_data['Close'].min()
             if handle_min_price >= data['Close'].values[right_peak]:
-                utils.output_log("取っ手部分の下降が確認できません。パターンを無効とします。")
+                utils.output_log("取っ手付きソーサー型：取っ手部分の下降が確認できません。パターンを無効とします。")
                 handle_start += 5
                 continue
 
@@ -263,14 +263,14 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
             right_peak_price = data['Close'].values[right_peak]
             handle_depth = (right_peak_price - handle_min_price) / right_peak_price * 100
             if handle_depth > 5:
-                utils.output_log(f"取っ手部分の下降が5%の範囲外です: {handle_depth:.2f}%")
+                utils.output_log(f"取っ手付きソーサー型：取っ手部分の下降が5%の範囲外です: {handle_depth:.2f}%")
                 handle_start += 5
                 continue
 
             # 取っ手部分の傾きが急でないか（緩やかであることを確認）
             handle_slope = (handle_data['Close'].iloc[-1] - handle_data['Close'].iloc[0]) / len(handle_data)
             if handle_slope < 0 or handle_slope > abs(data['Close'].values[right_peak] - handle_min_price) / len(handle_data):
-                utils.output_log("取っ手部分の傾きが緩やかではありません。パターンを無効とします。")
+                utils.output_log("取っ手付きソーサー型：取っ手部分の傾きが緩やかではありません。パターンを無効とします。")
                 handle_start += 5
                 continue
 
@@ -328,7 +328,7 @@ def detect_double_bottom(data, window=2, image_folder=None):
 
         # 2つのボトムが近い価格帯であることを確認（差が10%以内）
         if abs(data['Close'].iloc[first_bottom] - data['Close'].iloc[second_bottom]) / data['Close'].iloc[first_bottom] > 0.1:
-            utils.output_log("2つのボトムの価格差が大きいため、ダブルボトムとは認められません。")
+            utils.output_log("ダブルボトム：2つのボトムの価格差が大きいため、認められません。")
             return False, None, None, None
 
         # ネックライン（2つのボトム間の高値）を取得
@@ -336,7 +336,7 @@ def detect_double_bottom(data, window=2, image_folder=None):
 
         # ネックラインがボトムから十分な差があるか確認（最低15%の差）
         if (neckline - min(data['Close'].iloc[first_bottom], data['Close'].iloc[second_bottom])) / min(data['Close'].iloc[first_bottom], data['Close'].iloc[second_bottom]) < 0.15:
-            utils.output_log("ネックラインがボトムから十分に離れていないため、ダブルボトムとは認められません。")
+            utils.output_log("ダブルボトム：ネックラインがボトムから十分に離れていないため、認められません。")
             return False, None, None, None
         purchase_price = neckline * 1.02  # ネックラインの2%上
 
@@ -473,10 +473,10 @@ def detect_vcp(data, window_sizes=[24, 16, 8, 2], image_folder=None):
 
     # ボラティリティが縮小しているか確認
     if all(round(x, 4) >= round(y, 4) for x, y in zip(volatilities, volatilities[1:])):
-        utils.output_log("ボラティリティが縮小しています。VCPの条件を満たしています。")
+        # utils.output_log("VCPパターン：ボラティリティが縮小しています。VCPの条件を満たしています。")
         recent_high = data['Close'][-10:].max()
         purchase_price = recent_high * 1.02  # 高値の2%上
-        utils.output_log(f"Recent High: {recent_high:.2f}, Purchase Price: {purchase_price:.2f}")
+        # utils.output_log(f"Recent High: {recent_high:.2f}, Purchase Price: {purchase_price:.2f}")
 
         # プロット用のラインを準備
         points = []
@@ -497,7 +497,7 @@ def detect_vcp(data, window_sizes=[24, 16, 8, 2], image_folder=None):
 
         return True, purchase_price
     else:
-        utils.output_log("ボラティリティが縮小していません。VCPの条件を満たしていません。")
+        utils.output_log("VCPパターン：ボラティリティが縮小していません。VCPの条件を満たしていません。")
         return False, None
 
 def calculate_buy_price(data, right_peak, buffer_percent=1.02):
@@ -536,7 +536,7 @@ def detect_market_downtrend(data, dow_data, sp500_data, ma_period=25, threshold=
         plot_pattern(data=data, title='Market Downtrend', image_name='market_downtrend.png', image_folder=image_folder)
         return True, data['Close'].iloc[-1]
     else:
-        utils.output_log(f"市場全体は下降トレンドではありませんので、売りは保留です。")
+        utils.output_log(f"市場全体下降：市場全体は下降トレンドではありませんので、売りは保留です。")
         return False, None
 
 @try_catch_decorator
@@ -552,7 +552,7 @@ def detect_moving_average_break(data, ma_period=50, threshold=0.05, image_folder
         plot_pattern(data=data, title='Moving Average Break', image_name='moving_average_break.png', image_folder=image_folder)
         return True, latest_price
     else:
-        utils.output_log(f"移動平均線を下回っていませんので、売りは保留です。")
+        utils.output_log(f"移動平均線下回り：移動平均線を下回っていませんので、売りは保留です。")
         return False, None
 # OK!
 @try_catch_decorator
@@ -648,7 +648,7 @@ def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_fol
             utils.output_log(f"上方チャネルライン：下降向きです")
             return False, None
     else:
-        utils.output_log(f"上方チャネルラインの点が不足しています")
+        utils.output_log(f"上方チャネルライン：点が不足しています")
         return False, None
     
     # 数値インデックスを使用して上方チャネルラインを計算

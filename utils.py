@@ -557,6 +557,7 @@ def convert_to_weekly(data):
     return weekly_data
 
 def filter_can_slim(ticker):
+    output_log(f"\n☆☆CAN-SLIM評価を確認：開始☆☆")
     ticker = yf.Ticker(ticker)
     
     score = 0
@@ -575,10 +576,10 @@ def filter_can_slim(ticker):
         if quarterly_growth_found:
             score += 1
         else:
-            print("C：四半期EPS成長率が25%以上ではありません。")
+            output_log(f"C：四半期EPS成長率が25%以上ではありません。{growth_rate}%でした。")
             failed_conditions += 1
     else:
-        print("C：四半期EPSデータがありません。")
+        output_log(f"C：四半期EPSデータがありません。")
         failed_conditions += 1
 
     # A (Annual Earnings Increases): 年間EPSの成長を確認
@@ -593,13 +594,13 @@ def filter_can_slim(ticker):
                 annual_growth_found = True
                 break
         if annual_growth_found:
-            print("A：年間EPS成長率が25%以上です。")
+            output_log("A：年間EPS成長率が25%以上です。")
             score += 1
         else:
-            print("A：年間EPS成長率が25%以上ではありません。")
+            output_log(f"A：年間EPS成長率が25%以上ではありません。{growth_rate}%でした。")
             failed_conditions += 1
     else:
-        print("A：年間EPSデータがありません。")
+        output_log("A：年間EPSデータがありません。")
         failed_conditions += 1
 
     # N (New Products, Management, or Conditions): 最近のニュースから新製品や経営の変化をチェック
@@ -617,13 +618,13 @@ def filter_can_slim(ticker):
                 new_product_or_management = True
 
         if new_product_or_management and is_new_news("\n".join(news_list)):
-            print(f"新製品または経営の変化に関するニュースが見つかりました")
+            output_log(f"N：新製品または経営の変化に関するニュースが見つかりました")
             score += 1
         else:
-            print("N：新製品または経営の変化に関するニュースが見つかりませんでした。")
+            output_log("N：新製品または経営の変化に関するニュースが見つかりませんでした。")
             failed_conditions += 1
     else:
-        print("N：ニュースデータがありません。")
+        output_log("N：ニュースデータがありません。")
         failed_conditions += 1
 
     # S (Supply and Demand): 過去1年の出来高データを取得して、最近の増加を確認
@@ -636,23 +637,23 @@ def filter_can_slim(ticker):
         # 出来高が増加しているか確認
         if recent_max_volume > 1.05 * average_volume:
             score += 1
-            print("S：出来高の増加が確認されました。")
+            output_log("S：出来高の増加が確認されました。")
             # 機関投資家の活動の可能性を間接的に評価
             if recent_max_volume > 1.2 * average_volume:
-                print("S：直近の出来高が大幅に増加しています。")
+                output_log("S：直近の出来高が大幅に増加しています。")
         else:
-            print("S：出来高の増加が十分ではありません。直近の最大出来高: {recent_max_volume} 平均出来高: {average_volume}")
+            output_log("S：出来高の増加が十分ではありません。直近の最大出来高: {recent_max_volume} 平均出来高: {average_volume}")
             failed_conditions += 1
     else:
-        print("S：過去1年の出来高データがありません。")
+        output_log("S：過去1年の出来高データがありません。")
         failed_conditions += 1
 
     # L (Leader or Laggard): 業界リーダーを判断するための指標（ROEやNet Profit Margin）を取得
     if is_leader(ticker):
-        print("L：業界リーダーになりうるとAIが判断します")
+        output_log("L：業界リーダーになりうるとAIが判断します")
         score += 1
     else:
-        print("L：業界リーダーとAIが判断しません")
+        output_log("L：業界リーダーとAIが判断しません")
         failed_conditions += 1
 
     # I (Institutional Sponsorship): 機関投資家の直近の動向をチェック
@@ -667,25 +668,25 @@ def filter_can_slim(ticker):
                 recent_date = pd.Timestamp.now() - pd.Timedelta(weeks=8)  # 直近8週間以内のデータを使用
                 recent_data = institutional_holders[institutional_holders['Date Reported'] > recent_date]
                 if not recent_data.empty and any(recent_data['Shares'] > 0):
-                    print("I：機関投資家が直近で株を購入しています。")
+                    output_log("I：機関投資家が直近で株を購入しています。")
                     score += 1
                     break
                 else:
-                    print("I：機関投資家の直近での購入が見当たりませんでした。")
-                    print(institutional_holders)
+                    output_log("I：機関投資家の直近での購入が見当たりませんでした。")
+                    output_log(institutional_holders)
                     failed_conditions += 1
                     break
             else:
-                print("I：機関投資家の保有データがありません。")
+                output_log("I：機関投資家の保有データがありません。")
                 failed_conditions += 1
                 break
         except Exception as e:
-            print(f"I：Error institutional_holders: {e} 再試行します... ({retries + 1}/{max_retries})")
+            output_log(f"I：Error institutional_holders: {e} 再試行します... ({retries + 1}/{max_retries})")
             retries += 1
             time.sleep(2)  # 2秒待ってから再試行
 
     if retries == max_retries:
-        print("I：最大試行回数に達しました。データを取得できませんでした。")
+        output_log("I：最大試行回数に達しました。データを取得できませんでした。")
         failed_conditions += 1
 
     # M (Market Direction): 市場全体のトレンドを確認（S&P500とダウ平均）
@@ -700,11 +701,13 @@ def filter_can_slim(ticker):
     if dow_uptrend or sp500_uptrend:
         if dow_uptrend: score += 0.5
         if sp500_uptrend: score += 0.5
-        print("M：市場全体が上昇トレンドです")
+        output_log(f"M：市場全体が上昇トレンドです。 dow:{dow_uptrend} / sp500:{sp500_uptrend}")
     else:
         failed_conditions += 1
-        print("M：市場全体が上昇トレンドではありません")
+        output_log("M：市場全体が上昇トレンドではありません")
 
+    output_log(f"評価：{score}/{score + failed_conditions}点")
+    output_log(f"☆☆CAN-SLIM評価を確認：終了☆☆")
     return score, failed_conditions
 
 def is_new_news(news_list):
@@ -728,25 +731,17 @@ def get_buy_sell_price(ticker, date = 720):
     dow_data = save_ticker_auto('^GSPC', date)
     folder_path = create_folder_path(ticker)
 
-    try:
-        set_output_log_file_path(ticker, 'can_slim', True)
-        output_log(f"\n★★★{ticker}★★★")
+    # ベースグラフを作成
+    create_plot_pattern(data, folder_path)
 
-        # ベースグラフを作成
-        create_plot_pattern(data, folder_path)
+    # 買い価格を決定
+    get_buy_price(data, folder_path)
 
-        # 買い価格を決定
-        get_buy_price(data, folder_path)
+    # 売り価格を決定
+    get_sell_price(data, sp500_data, dow_data, image_folder = folder_path)
 
-        # 売り価格を決定
-        get_sell_price(data, sp500_data, dow_data, image_folder = folder_path)
-
-        # 損切価格を決定
-        # get_buy_price(data)
-    finally:
-        send_line_log_text()
-        set_output_log_file_path(is_clear=True)
-
+    # 損切価格を決定
+    # get_buy_price(data)
 
 def create_plot_pattern(data, image_folder=None):
     # ベースの図を作成
@@ -758,7 +753,7 @@ def create_plot_pattern(data, image_folder=None):
 
 def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=True
                   , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=True):
-    output_log(f"\n☆買い価格を確認：開始☆")
+    output_log(f"\n☆☆買い価格を確認：開始☆☆")
     if is_cup_with_handle:
         weekly_data = convert_to_weekly(data_filter_date(data, 180))
         pattern_found, purchase_price, left_peak, cup_bottom, right_peak = util_can_slim_type.detect_cup_with_handle(weekly_data, image_folder=image_folder)
@@ -801,11 +796,11 @@ def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_wi
     #     buy_price = calculate_buy_price(data, right)
     #     output_log(f"推奨購入価格: {buy_price:.2f}")
 
-    output_log(f"☆買い価格を確認：終了☆")
+    output_log(f"☆☆買い価格を確認：終了☆☆")
 
 def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_channel_line=True, is_climax_top=True, is_exhaustion_gap=True,
-                    is_railroad_tracks=True, is_double_top=True, is_market_downtrend=True, is_moving_average_break=False):
-    output_log(f"\n☆売り価格を確認：開始☆")
+                    is_railroad_tracks=True, is_double_top=True, is_market_downtrend=True, is_moving_average_break=True):
+    output_log(f"\n☆☆売り価格を確認：開始☆☆")
     if is_market_downtrend:
         weekly_data = convert_to_weekly(data_filter_date(data, 180))
         weekly_sp500_data = convert_to_weekly(data_filter_index(sp500_data, 180))
@@ -850,7 +845,7 @@ def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_chann
     #     if signal:
     #         output_log(f"レールロードトラックの売りシグナルが検出されました。売り価格は {price} です。")
 
-    output_log(f"☆売り価格を確認：終了☆")
+    output_log(f"☆☆売り価格を確認：終了☆☆")
 
 def set_output_log_file_path(folder_name=None, file_name=None, is_time_str=False, is_clear=False):
     global log_file_path
