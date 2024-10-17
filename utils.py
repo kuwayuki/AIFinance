@@ -598,14 +598,36 @@ def all_print(ticker):
     # 推奨情報
     jsonOutput(etf.recommendations, "アナリスト推奨")
     jsonOutput(etf.recommendations_summary, "推奨サマリー")
+    jsonOutput(etf.upgrades_downgrades, "アップグレード/ダウングレード情報")
     
     # 会社の予定
-    jsonOutput(etf.calendar, "会社の予定（カレンダー）")
-    
+    output_log(etf.calendar, title="会社の予定（カレンダー）")
+
     # 株式保有情報
     jsonOutput(etf.major_holders, "主要株主")
-    jsonOutput(etf.institutional_holders, "機関投資家の保有株")
-    jsonOutput(etf.mutualfund_holders, "投資信託保有者")
+
+    max_retries = 3
+    retries = 0
+    while retries < max_retries:
+        try: 
+            institutional_holders = etf.institutional_holders
+            if institutional_holders is not None and not institutional_holders.empty:
+                output_log(institutional_holders, title="機関投資家の保有株")
+                break
+        except Exception as e:
+            retries += 1
+            time.sleep(2)  # 2秒待ってから再試行
+
+    retries = 0
+    while retries < max_retries:
+        try: 
+            mutualfund_holders = etf.mutualfund_holders
+            if mutualfund_holders is not None and not mutualfund_holders.empty:
+                output_log(mutualfund_holders, title="投資信託保有者")
+                break
+        except Exception as e:
+            retries += 1
+            time.sleep(2)  # 2秒待ってから再試行
     
     # ニュース
     jsonOutput(etf.news, "最新ニュース")
@@ -620,6 +642,20 @@ def all_print(ticker):
     # jsonOutput(etf.revenue_forecasts, "収益予測")
     # jsonOutput(etf.earnings_forecasts, "収益予測")
     # jsonOutput(etf.earnings_trend, "収益トレンド")
+
+    # インサイダー取引情報
+    output_log(etf.insider_purchases, title="インサイダーの株式購入情報")
+    output_log(etf.insider_transactions, title="インサイダー取引情報")
+    output_log(etf.insider_roster_holders, title="インサイダーホルダー")
+    
+    # キャピタルゲイン情報
+    output_log(etf.capital_gains, title="キャピタルゲイン情報")
+    
+    # 株式アクション（配当・分割など）
+    jsonOutput(etf.actions, "株式アクション情報（配当・分割など）")
+    
+    # ISIN情報
+    jsonOutput(etf.isin, "国際証券識別番号（ISIN）")
 
 def filter_can_slim(ticker):
     # return all_print(ticker)
@@ -644,9 +680,10 @@ def filter_can_slim(ticker):
                 latest_growth_rate = growth_rate
         
         if latest_growth_rate is not None and latest_growth_rate > eps_under and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
+            output_log(f"C：◎四半期EPS成長率が{eps_under}%以上を超えています。直近は{latest_growth_rate}%でした。")
             score += 1
         else:
-            output_log(f"C：四半期EPS成長率が{eps_under}%以上の期間が足りませんでした。")
+            output_log(f"C：四半期EPS成長率が{eps_under}%以上の期間が足りませんでした。直近は{latest_growth_rate}%でした。")
             failed_conditions += 1
     else:
         output_log(f"C：四半期EPSデータがありません。Reported EPSデータを代用します。")
@@ -670,11 +707,12 @@ def filter_can_slim(ticker):
                     if i == len(eps_values) - 1:
                         latest_growth_rate = growth_rate
                 
-                if latest_growth_rate is not None and latest_growth_rate > eps_under and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
-                    output_log(f"C：◎四半期EPS成長率が{eps_under}%以上を超えています。")
+                if latest_growth_rate is not None and latest_growth_rate > eps_under:  # 直近の成長も含めて評価
+                # if latest_growth_rate is not None and latest_growth_rate > eps_under and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
+                    output_log(f"C：◎四半期EPS成長率が{eps_under}%以上を超えています。直近は{latest_growth_rate}%でした。")
                     score += 1
                 else:
-                    output_log(f"C：四半期EPS成長率が{eps_under}%以上の期間が足りませんでした。")
+                    output_log(f"C：四半期EPS成長率が{eps_under}%以上の期間が足りませんでした。直近は{latest_growth_rate}%でした。")
                     failed_conditions += 1
             else:
                 output_log(f"C：有効な四半期EPSデータが不足しています。")
@@ -784,7 +822,7 @@ def filter_can_slim(ticker):
             if institutional_holders is not None and not institutional_holders.empty:
                 # Date Reportedで直近のデータを絞り込む
                 institutional_holders['Date Reported'] = pd.to_datetime(institutional_holders['Date Reported'])
-                recent_date = pd.Timestamp.now() - pd.Timedelta(weeks=8)  # 直近8週間以内のデータを使用
+                recent_date = pd.Timestamp.now() - pd.Timedelta(days=95)  # 直近8週間以内のデータを使用
                 recent_data = institutional_holders[institutional_holders['Date Reported'] > recent_date]
                 if not recent_data.empty and any(recent_data['Shares'] > 0):
                     output_log("I：◎機関投資家が直近で株を購入しています。")
@@ -826,7 +864,7 @@ def filter_can_slim(ticker):
         output_log("M：市場全体が上昇トレンドではありません")
 
     output_log(f"評価：{score}/{score + failed_conditions}点")
-    output_log(f"☆☆CAN-SLIM評価を確認：終了☆☆")
+    output_log(f"☆☆CAN-SLIM評価を確認：終了☆☆\n")
     return score, failed_conditions
 
 def is_new_news(news_list):
@@ -980,16 +1018,21 @@ def set_output_log_file_path(folder_name=None, file_name=None, is_time_str=False
 
     log_file_path = os.path.join(create_folder_path(folder_name), file_name)
 
-def output_log(message, is_json = False):
+def output_log(message, is_json = False, title = None):
     global log_file_path
+    out_message = ''
+    if title is not None:
+        out_message = title
+
     if is_json:
-        out_message = json.dumps(message, indent=4, ensure_ascii=False)
+        out_message += json.dumps(message, indent=4, ensure_ascii=False)
     else:
-        out_message = str(message)
+        out_message += str(message)
     print(str(message))
     if log_file_path:
         try:
             with open(log_file_path, 'a', encoding='utf-8') as file:
+
                 file.write(out_message + '\n')
         except Exception as e:
             print(f"ファイルの保存中にエラーが発生しました: {e}")

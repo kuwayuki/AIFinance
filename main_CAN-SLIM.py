@@ -36,7 +36,7 @@ def filter_can_slim(tickers):
     )
     return utils.get_ai_opinion(prompt, PROMPT_CAN_SLIM_SYSTEM)
 
-def get_buy_sell_prices(tickers):
+def get_buy_sell_prices(tickers, is_output_all_info = False):
     for ticker in tickers:
         # industry, sector = utils.get_industry_tickers(ticker)
         # if industry and sector:
@@ -45,12 +45,16 @@ def get_buy_sell_prices(tickers):
         #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
         # utils.get_buy_sell_price(ticker)
         try:
+
+            if is_output_all_info:
+                utils.set_output_log_file_path(ticker, 'all_info', True)
+                utils.all_print(ticker)
+
             utils.set_output_log_file_path(ticker, 'can_slim', True)
             utils.output_log(f"\n★★★{ticker}★★★")
 
-            # utils.all_print(ticker)
             score, failed_conditions = utils.filter_can_slim(ticker)
-            if score > 5:
+            if score > 2:
                 utils.get_buy_sell_price(ticker)
                 utils.send_line_log_text()
             else:
