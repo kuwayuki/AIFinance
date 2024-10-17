@@ -1,0 +1,3 @@
+CONSTANT = {
+    "EPS": 20,
+}

@@ -48,6 +48,7 @@ def get_buy_sell_prices(tickers):
             utils.set_output_log_file_path(ticker, 'can_slim', True)
             utils.output_log(f"\n★★★{ticker}★★★")
 
+            # utils.all_print(ticker)
             score, failed_conditions = utils.filter_can_slim(ticker)
             if score > 5:
                 utils.get_buy_sell_price(ticker)

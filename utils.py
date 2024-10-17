@@ -14,6 +14,7 @@ import csv
 import sys
 import util_can_slim_type
 from prompts import PROMPT_SYSTEM_BASE, PROMPT_RELATIONS_CUT, PROMPT_SYSTEM, PROMPT_USER
+from constant import CONSTANT
 from scipy.stats import linregress
 from scipy.signal import argrelextrema
 import numpy as np
@@ -621,14 +622,13 @@ def all_print(ticker):
     # jsonOutput(etf.earnings_trend, "収益トレンド")
 
 def filter_can_slim(ticker):
-
-    return all_print(ticker)
-
+    # return all_print(ticker)
     output_log(f"\n☆☆CAN-SLIM評価を確認：開始☆☆")
     ticker = yf.Ticker(ticker)
     
     score = 0
     failed_conditions = 0
+    eps_under = CONSTANT["EPS"]
 
     # C (Current Quarterly Earnings and Sales): 四半期EPS成長を確認
     quarterly_earnings = ticker.quarterly_earnings
@@ -638,56 +638,85 @@ def filter_can_slim(ticker):
         latest_growth_rate = None
         for i in range(1, len(quarterly_earnings)):
             growth_rate = (quarterly_earnings['Earnings'][i] - quarterly_earnings['Earnings'][i-1]) / abs(quarterly_earnings['Earnings'][i-1]) * 100
-            if growth_rate > 25:
+            if growth_rate > eps_under:
                 quarterly_growth_count += 1
             if i == len(quarterly_earnings) - 1:
                 latest_growth_rate = growth_rate
         
-        if latest_growth_rate is not None and latest_growth_rate > 25 and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
+        if latest_growth_rate is not None and latest_growth_rate > eps_under and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
             score += 1
         else:
-            output_log(f"C：四半期EPS成長率が25%以上の期間が足りませんでした。")
+            output_log(f"C：四半期EPS成長率が{eps_under}%以上の期間が足りませんでした。")
             failed_conditions += 1
     else:
-        output_log(f"C：四十期EPSデータがありません。年間EPSデータを代用します。")
-        # 年間EPSデータを代用
-        income_statement = ticker.income_stmt
-        if income_statement is not None and not income_statement.empty and 'EPS' in income_statement.index:
-            annual_earnings = income_statement.loc['EPS']
-            annual_growth_count = 0
-            latest_growth_rate = None
-            for i in range(1, len(annual_earnings)):
-                growth_rate = (annual_earnings[i] - annual_earnings[i-1]) / abs(annual_earnings[i-1]) * 100
-                if growth_rate > 25:
-                    annual_growth_count += 1
-                if i == len(annual_earnings) - 1:
-                    latest_growth_rate = growth_rate
-            
-            if latest_growth_rate is not None and latest_growth_rate > 25 and annual_growth_count >= 2:
-                score += 1
+        output_log(f"C：四半期EPSデータがありません。Reported EPSデータを代用します。")
+        # Reported EPSデータを代用
+        earnings_data = ticker.earnings_dates
+        if earnings_data is not None:
+            # Reported EPS から有効な四半期EPSデータを取得
+            reported_eps = earnings_data.get('Reported EPS', {})
+            current_time = pd.Timestamp.now().tz_localize(None)  # 現在のタイムスタンプをtz-naiveに変換
+            quarterly_eps = {k: v for k, v in reported_eps.items() if not pd.isna(v) and pd.to_datetime(k).tz_localize(None) < current_time}
+            sorted_eps = dict(sorted(quarterly_eps.items(), key=lambda x: pd.to_datetime(x[0]).tz_localize(None)))
+
+            if len(sorted_eps) >= 2:
+                eps_values = list(sorted_eps.values())
+                quarterly_growth_count = 0
+                latest_growth_rate = None
+                for i in range(1, len(eps_values)):
+                    growth_rate = (eps_values[i] - eps_values[i-1]) / abs(eps_values[i-1]) * 100
+                    if growth_rate > eps_under:
+                        quarterly_growth_count += 1
+                    if i == len(eps_values) - 1:
+                        latest_growth_rate = growth_rate
+                
+                if latest_growth_rate is not None and latest_growth_rate > eps_under and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
+                    output_log(f"C：◎四半期EPS成長率が{eps_under}%以上を超えています。")
+                    score += 1
+                else:
+                    output_log(f"C：四半期EPS成長率が{eps_under}%以上の期間が足りませんでした。")
+                    failed_conditions += 1
             else:
-                output_log(f"C：年間EPS成長率が25%以上の期間が足りませんでした。")
+                output_log(f"C：有効な四半期EPSデータが不足しています。")
                 failed_conditions += 1
         else:
-            output_log(f"C：年間EPSデータがありません。")
+            output_log(f"C：四半期EPSデータがありません。")
             failed_conditions += 1
 
     # A (Annual Earnings Increases): 年間EPSの成長を確認
     income_statement = ticker.income_stmt
     if income_statement is not None and not income_statement.empty:
-        annual_growth_found = False
-        annual_earnings = income_statement.loc['Net Income']
-        # 年間EPS成長率を計算し、25%以上かどうかを確認
-        for i in range(1, len(annual_earnings)):
-            growth_rate = (annual_earnings[i] - annual_earnings[i-1]) / abs(annual_earnings[i-1]) * 100
-            if growth_rate > 25:
-                annual_growth_found = True
-                break
-        if annual_growth_found:
-            output_log("A：年間EPS成長率が25%以上です。")
-            score += 1
+        # EPSデータを取得し、なければNet Incomeを代用
+        if 'Diluted EPS' in income_statement.index:
+            annual_earnings = income_statement.loc['Diluted EPS'].sort_index(ascending=True)
+        elif 'Basic EPS' in income_statement.index:
+            annual_earnings = income_statement.loc['Basic EPS'].sort_index(ascending=True)
+        elif 'Reported EPS' in income_statement.index:
+            annual_earnings = income_statement.loc['Reported EPS'].sort_index(ascending=True)
+        elif 'Net Income' in income_statement.index:
+            annual_earnings = income_statement.loc['Net Income'].sort_index(ascending=True)
         else:
-            output_log(f"A：年間EPS成長率が25%以上ではありません。{growth_rate}%でした。")
+            annual_earnings = None
+
+        if annual_earnings is not None:
+            annual_growth_count = 0
+            latest_growth_rate = None
+            # 年間EPS成長率を計算し、25%以上かどうかを確認
+            for i in range(1, len(annual_earnings)):
+                growth_rate = (annual_earnings[i] - annual_earnings[i-1]) / abs(annual_earnings[i-1]) * 100
+                if growth_rate > eps_under:
+                    annual_growth_count += 1
+                if i == len(annual_earnings) - 1:
+                    latest_growth_rate = growth_rate
+            
+            if latest_growth_rate is not None and latest_growth_rate > eps_under and annual_growth_count >= 2:  # 直近の成長も含めて評価
+                output_log(f"A：◎年間EPS成長率が{eps_under}%以上です。")
+                score += 1
+            else:
+                output_log(f"A：年間EPS成長率が{eps_under}%以上の期間が足りませんでした。{latest_growth_rate}%でした。")
+                failed_conditions += 1
+        else:
+            output_log("A：年間EPSデータがありません。")
             failed_conditions += 1
     else:
         output_log("A：年間EPSデータがありません。")
@@ -708,7 +737,7 @@ def filter_can_slim(ticker):
                 new_product_or_management = True
 
         if new_product_or_management and is_new_news("\n".join(news_list)):
-            output_log(f"N：新製品または経営の変化に関するニュースが見つかりました")
+            output_log(f"N：◎新製品または経営の変化に関するニュースが見つかりました")
             score += 1
         else:
             output_log("N：新製品または経営の変化に関するニュースが見つかりませんでした。")
@@ -727,12 +756,12 @@ def filter_can_slim(ticker):
         # 出来高が増加しているか確認
         if recent_max_volume > 1.05 * average_volume:
             score += 1
-            output_log("S：出来高の増加が確認されました。")
+            output_log("S：◎出来高の増加が確認されました。")
             # 機関投資家の活動の可能性を間接的に評価
             if recent_max_volume > 1.2 * average_volume:
                 output_log("S：直近の出来高が大幅に増加しています。")
         else:
-            output_log("S：出来高の増加が十分ではありません。直近の最大出来高: {recent_max_volume} 平均出来高: {average_volume}")
+            output_log(f"S：出来高の増加が十分ではありません。直近の最大出来高: {recent_max_volume} 平均出来高: {average_volume}")
             failed_conditions += 1
     else:
         output_log("S：過去1年の出来高データがありません。")
@@ -740,7 +769,7 @@ def filter_can_slim(ticker):
 
     # L (Leader or Laggard): 業界リーダーを判断するための指標（ROEやNet Profit Margin）を取得
     if is_leader(ticker):
-        output_log("L：業界リーダーになりうるとAIが判断します")
+        output_log("L：◎業界リーダーになりうるとAIが判断します")
         score += 1
     else:
         output_log("L：業界リーダーとAIが判断しません")
@@ -758,7 +787,7 @@ def filter_can_slim(ticker):
                 recent_date = pd.Timestamp.now() - pd.Timedelta(weeks=8)  # 直近8週間以内のデータを使用
                 recent_data = institutional_holders[institutional_holders['Date Reported'] > recent_date]
                 if not recent_data.empty and any(recent_data['Shares'] > 0):
-                    output_log("I：機関投資家が直近で株を購入しています。")
+                    output_log("I：◎機関投資家が直近で株を購入しています。")
                     score += 1
                     break
                 else:
@@ -791,7 +820,7 @@ def filter_can_slim(ticker):
     if dow_uptrend or sp500_uptrend:
         if dow_uptrend: score += 0.5
         if sp500_uptrend: score += 0.5
-        output_log(f"M：市場全体が上昇トレンドです。 dow:{dow_uptrend} / sp500:{sp500_uptrend}")
+        output_log(f"M：◎市場全体が上昇トレンドです。 dow:{dow_uptrend} / sp500:{sp500_uptrend}")
     else:
         failed_conditions += 1
         output_log("M：市場全体が上昇トレンドではありません")
