@@ -51,7 +51,7 @@ def get_buy_sell_prices(tickers, is_output_all_info = False):
                 utils.all_print(ticker)
 
             utils.set_output_log_file_path(ticker, 'can_slim', True)
-            utils.output_log(f"\n★★★{ticker}★★★")
+            utils.output_log(f"\n★★★{ticker} Start★★★")
 
             score, failed_conditions = utils.filter_can_slim(ticker)
             if score > 2:
@@ -62,6 +62,7 @@ def get_buy_sell_prices(tickers, is_output_all_info = False):
             # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
 
         finally:
+            utils.output_log(f"\n★★★{ticker} End★★★")
             utils.set_output_log_file_path(is_clear=True)
 
 if __name__ == "__main__":

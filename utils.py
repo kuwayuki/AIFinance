@@ -659,7 +659,7 @@ def all_print(ticker):
 
 def filter_can_slim(ticker):
     # return all_print(ticker)
-    output_log(f"\n☆☆CAN-SLIM評価を確認：開始☆☆")
+    output_log(f"\n☆☆CAN-SLIM評価：開始☆☆")
     ticker = yf.Ticker(ticker)
     
     score = 0
@@ -770,12 +770,12 @@ def filter_can_slim(ticker):
             news_date = pd.to_datetime(item['providerPublishTime'], unit='s')
             if news_date > recent_weeks:
                 news = f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}"
-                print(news)
                 news_list.append(news)
                 new_product_or_management = True
 
         if new_product_or_management and is_new_news("\n".join(news_list)):
             output_log(f"N：◎新製品または経営の変化に関するニュースが見つかりました")
+            output_log(get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"]))
             score += 1
         else:
             output_log("N：新製品または経営の変化に関するニュースが見つかりませんでした。")
@@ -830,7 +830,8 @@ def filter_can_slim(ticker):
                     break
                 else:
                     output_log("I：機関投資家の直近での購入が見当たりませんでした。")
-                    output_log(institutional_holders)
+                    print(institutional_holders)
+                    # output_log(institutional_holders)
                     failed_conditions += 1
                     break
             else:
@@ -864,7 +865,7 @@ def filter_can_slim(ticker):
         output_log("M：市場全体が上昇トレンドではありません")
 
     output_log(f"評価：{score}/{score + failed_conditions}点")
-    output_log(f"☆☆CAN-SLIM評価を確認：終了☆☆\n")
+    output_log(f"☆☆CAN-SLIM評価：終了☆☆\n")
     return score, failed_conditions
 
 def is_new_news(news_list):
@@ -910,7 +911,7 @@ def create_plot_pattern(data, image_folder=None):
 
 def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=True
                   , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=True):
-    output_log(f"\n☆☆買い価格を確認：開始☆☆")
+    output_log(f"\n☆☆買い価格：開始☆☆")
     if is_cup_with_handle:
         weekly_data = convert_to_weekly(data_filter_date(data, 180))
         pattern_found, purchase_price, left_peak, cup_bottom, right_peak = util_can_slim_type.detect_cup_with_handle(weekly_data, image_folder=image_folder)
@@ -953,11 +954,11 @@ def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_wi
     #     buy_price = calculate_buy_price(data, right)
     #     output_log(f"推奨購入価格: {buy_price:.2f}")
 
-    output_log(f"☆☆買い価格を確認：終了☆☆")
+    output_log(f"☆☆買い価格：終了☆☆")
 
 def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_channel_line=True, is_climax_top=True, is_exhaustion_gap=True,
                     is_railroad_tracks=True, is_double_top=True, is_market_downtrend=True, is_moving_average_break=True):
-    output_log(f"\n☆☆売り価格を確認：開始☆☆")
+    output_log(f"\n☆☆売り価格：開始☆☆")
     if is_market_downtrend:
         weekly_data = convert_to_weekly(data_filter_date(data, 180))
         weekly_sp500_data = convert_to_weekly(data_filter_index(sp500_data, 180))
@@ -1002,7 +1003,7 @@ def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_chann
     #     if signal:
     #         output_log(f"レールロードトラックの売りシグナルが検出されました。売り価格は {price} です。")
 
-    output_log(f"☆☆売り価格を確認：終了☆☆")
+    output_log(f"☆☆売り価格：終了☆☆")
 
 def set_output_log_file_path(folder_name=None, file_name=None, is_time_str=False, is_clear=False):
     global log_file_path

@@ -1,7 +1,9 @@
 PROMPT_SYSTEM = {
     "NONE": "",
     "ARRAY": "配列で返却してください",
-    "IS_TRUE": "True or Falseで返却してください"
+    "IS_TRUE": "True or Falseで返却してください",
+    "JAPANESE_SUMMARY_ARRAY": "日本語で要約して配列で返却してください。先頭に日付も記載してください。",
+    "JAPANESE_SUMMARY": "日本語で要約して配列で返却してください",
 }
 
 PROMPT_USER = {
