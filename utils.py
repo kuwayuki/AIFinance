@@ -579,6 +579,15 @@ def jsonOutput(data, title="", is_output=True):
 
 def all_print(ticker):
     etf = yf.Ticker(ticker)
+    # tech = yf.Sector(etf.info.get('sectorKey'))
+    # software = yf.Industry(etf.info.get('industryKey'))
+    # Sector and Industry to Ticker
+    # tech_ticker = tech.ticker
+    # tech_ticker.info
+    # jsonOutput(tech_ticker.info, "関係基本情報（会社名、業界、株価など）")
+    # software_ticker = software.ticker
+    # jsonOutput(software_ticker.history(), "関係AA基本情報（会社名、業界、株価など）")
+
     # 基本情報
     jsonOutput(etf.info, "基本情報（会社名、業界、株価など）")
     
@@ -638,10 +647,10 @@ def all_print(ticker):
     # 追加の情報
     jsonOutput(etf.earnings_dates, "収益日")
     jsonOutput(etf.history_metadata, "履歴メタデータ")
-    # jsonOutput(etf.analyst_price_target, "アナリスト価格目標")
-    # jsonOutput(etf.revenue_forecasts, "収益予測")
-    # jsonOutput(etf.earnings_forecasts, "収益予測")
-    # jsonOutput(etf.earnings_trend, "収益トレンド")
+    jsonOutput(etf.analyst_price_targets, "アナリスト価格目標")
+    jsonOutput(etf.revenue_estimate, "収益予測")
+    jsonOutput(etf.earnings_estimate, "収益予測")
+    jsonOutput(etf.eps_trend, "収益トレンド")
 
     # インサイダー取引情報
     output_log(etf.insider_purchases, title="インサイダーの株式購入情報")
@@ -825,6 +834,7 @@ def filter_can_slim(ticker):
     max_retries = 3
     while retries < max_retries:
         try: 
+            major_holders = ticker.major_holders
             institutional_holders = ticker.institutional_holders
             if institutional_holders is not None and not institutional_holders.empty:
                 # Date Reportedで直近のデータを絞り込む
