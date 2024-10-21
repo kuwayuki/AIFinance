@@ -5,12 +5,14 @@ import json
 import sys
 import utils
 import get_news
+import main as MainPy
 import output_csv
 # プロンプトをインポート
 from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
 tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['IMMR']  # 複数ティッカーをカンマ区切りで受け取る
 folder_path = ''
+is_future = sys.argv[2] == True if len(sys.argv) > 2 else False 
 
 def main(tickers):
     global folder_path
@@ -55,6 +57,8 @@ def get_buy_sell_prices(tickers, is_output_all_info = False):
 
             score, failed_conditions = utils.filter_can_slim(ticker)
             if score > 2:
+                if is_future:
+                    MainPy.future(ticker, False)
                 utils.get_buy_sell_price(ticker)
                 utils.send_line_log_text()
             else:

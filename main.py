@@ -29,7 +29,7 @@ IS_SHORT_CONTINUE_DETAIL = sys.argv[2].lower() == 'true' if len(sys.argv) > 2 el
 NEWS_URL = "https://news.google.com/news/rss/headlines/section/topic/BUSINESS?hl=ja&gl=JP&ceid=JP:ja"
 
 # メイン処理
-def main(ticker, force_news="", is_short_continue_detail=False):
+def main_action(ticker, force_news="", is_short_continue_detail=False):
     is_short = ticker == "SHORT"
     # force_news が指定されている場合、us_news を取得しない
     if not force_news:
@@ -77,7 +77,7 @@ def main(ticker, force_news="", is_short_continue_detail=False):
             quotes_list = re.findall(r'「(.*?)」', explane)
             print(quotes_list)
             for quote in quotes_list:
-                main(quote, us_news, False)  # それぞれのquoteをtickerとして使用
+                main_action(quote, us_news, False)  # それぞれのquoteをtickerとして使用
         return
     if IS_ALL:
         utils.process_ai_opinion(True, ticker, us_news, historical_section, json_section, PROMPT_BASE_ALL, os.path.join(folder_path, f'result_all_{time_str}.txt'))
@@ -128,8 +128,8 @@ def future(ticker, is_include_history_data = False, is_grow = False, file_path =
     except Exception as e:
         print(f"ファイルの保存中にエラーが発生しました: {e}")
 
-# 複数のティッカーに対してループ処理
-if __name__ == "__main__":
+
+def main():
     is_future = sys.argv[2] == "FUTURE" if len(sys.argv) > 2 else False 
     is_grow = sys.argv[2] == "GROW" if len(sys.argv) > 2 else False 
     if is_future or is_grow:
@@ -164,5 +164,9 @@ if __name__ == "__main__":
                 # future(ticker, True)
             else:
                 # python main.py "NVDA"
-                main(ticker, news_all_relations, IS_SHORT_CONTINUE_DETAIL)
+                main_action(ticker, news_all_relations, IS_SHORT_CONTINUE_DETAIL)
             # main(ticker)import yfinance as yf
+
+# 複数のティッカーに対してループ処理
+if __name__ == "__main__":
+    main()

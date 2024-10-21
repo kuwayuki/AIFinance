@@ -766,16 +766,22 @@ def filter_can_slim(ticker):
         new_product_or_management = False
         recent_weeks = pd.Timestamp.now() - pd.Timedelta(weeks=2)
         news_list = []
+        news_link_list = []
         for item in news:
             news_date = pd.to_datetime(item['providerPublishTime'], unit='s')
             if news_date > recent_weeks:
                 news = f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}"
                 news_list.append(news)
+                news_link_list.append(item['link'])
                 new_product_or_management = True
 
         if new_product_or_management and is_new_news("\n".join(news_list)):
             output_log(f"N：◎新製品または経営の変化に関するニュースが見つかりました")
-            output_log(get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"]))
+            news_summary = get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"])
+            output_log(news_summary)
+            for link in news_link_list:
+                output_log(link + '\n', is_print_only=True)
+            # output_log(get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"]))
             score += 1
         else:
             output_log("N：新製品または経営の変化に関するニュースが見つかりませんでした。")
@@ -794,10 +800,11 @@ def filter_can_slim(ticker):
         # 出来高が増加しているか確認
         if recent_max_volume > 1.05 * average_volume:
             score += 1
-            output_log("S：◎出来高の増加が確認されました。")
+            output_log(f"S：◎出来高の増加が確認されました。直近の最大出来高: {recent_max_volume} 平均出来高: {average_volume}")
             # 機関投資家の活動の可能性を間接的に評価
             if recent_max_volume > 1.2 * average_volume:
-                output_log("S：直近の出来高が大幅に増加しています。")
+                score += 0.5 # ボーナス
+                output_log("S：〇直近の出来高が大幅に増加しています。")
         else:
             output_log(f"S：出来高の増加が十分ではありません。直近の最大出来高: {recent_max_volume} 平均出来高: {average_volume}")
             failed_conditions += 1
@@ -903,11 +910,11 @@ def get_buy_sell_price(ticker, date = 720):
 
 def create_plot_pattern(data, image_folder=None):
     # ベースの図を作成
-    util_can_slim_type.plot_pattern(data=data, title='day', image_name='0_base_day.png', image_folder=image_folder)
+    util_can_slim_type.plot_pattern(data=data, title='day', image_name='0A_base_day.png', image_folder=image_folder, is_output_log=False)
 
     # ベースの図を作成
     weekly_data = convert_to_weekly(data)
-    util_can_slim_type.plot_pattern(data=weekly_data, title='week', image_name='0_base_week.png', image_folder=image_folder)
+    util_can_slim_type.plot_pattern(data=weekly_data, title='week', image_name='0B_base_week.png', image_folder=image_folder, is_output_log=False)
 
 def get_buy_price(data, image_folder=None, is_cup_with_handle=True, is_saucer_with_handle=True, is_double_bottom=True
                   , is_flat_base=False, is_ascending_base=False, is_consolidation=False, is_vcp=True):
@@ -1019,7 +1026,7 @@ def set_output_log_file_path(folder_name=None, file_name=None, is_time_str=False
 
     log_file_path = os.path.join(create_folder_path(folder_name), file_name)
 
-def output_log(message, is_json = False, title = None):
+def output_log(message, is_json = False, title = None, is_print_only = False):
     global log_file_path
     out_message = ''
     if title is not None:
@@ -1030,6 +1037,10 @@ def output_log(message, is_json = False, title = None):
     else:
         out_message += str(message)
     print(str(message))
+
+    if is_print_only:
+        return
+
     if log_file_path:
         try:
             with open(log_file_path, 'a', encoding='utf-8') as file:

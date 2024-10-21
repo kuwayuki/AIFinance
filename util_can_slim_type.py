@@ -17,7 +17,7 @@ def try_catch_decorator(func):
             print("終了処理を実行中です")
     return wrapper
 
-def plot_pattern(data, title, image_name, image_folder, points=None, lines=None):
+def plot_pattern(data, title, image_name, image_folder, points=None, lines=None, is_output_log = True):
     plt.figure(figsize=(12, 6))
     plt.plot(data['Close'], label='Close Price')
 
@@ -52,7 +52,8 @@ def plot_pattern(data, title, image_name, image_folder, points=None, lines=None)
         image_path = os.path.join(image_folder, image_name)
         plt.savefig(image_path)
         plt.close()
-        utils.output_log(f"{title} の図を保存しました: {image_path}")
+        if is_output_log:
+            utils.output_log(f"{title} の図を保存しました: {image_path}")
     else:
         plt.show()
 
@@ -174,7 +175,7 @@ def detect_cup_with_handle(data, window=2, image_folder=None, depth_check=True):
             points=points,
             lines=lines,
             title='Cup with Handle Pattern',
-            image_name='1_cup_with_handle.png',
+            image_name='01_cup_with_handle.png',
             image_folder=image_folder
         )
 
@@ -308,7 +309,7 @@ def detect_saucer_with_handle(data, window=5, image_folder=None, depth_check=Tru
             points=points,
             lines=lines,
             title='Saucer with Handle Pattern',
-            image_name='2_saucer_with_handle.png',
+            image_name='02_saucer_with_handle.png',
             image_folder=image_folder
         )
 
@@ -356,7 +357,7 @@ def detect_double_bottom(data, window=2, image_folder=None):
             points=points,
             lines=lines,
             title='Double Bottom Pattern',
-            image_name='3_double_bottom.png',
+            image_name='03_double_bottom.png',
             image_folder=image_folder
         )
 
@@ -389,7 +390,7 @@ def detect_flat_base(data, period=7, tolerance=0.05, image_folder=None):
             points=points,
             lines=lines,
             title='Flat Base Pattern',
-            image_name='4_flat_base.png',
+            image_name='04_flat_base.png',
             image_folder=image_folder
         )
 
@@ -421,7 +422,7 @@ def detect_ascending_base(data, window=60, image_folder=None):
             points=points,
             lines=lines,
             title='Ascending Base Pattern',
-            image_name='5_ascending_base.png',
+            image_name='05_ascending_base.png',
             image_folder=image_folder
         )
 
@@ -453,7 +454,7 @@ def detect_consolidation(data, period=30, tolerance=0.05, image_folder=None):
             points=points,
             lines=lines,
             title='Consolidation Pattern',
-            image_name='6_consolidation.png',
+            image_name='06_consolidation.png',
             image_folder=image_folder
         )
 
@@ -491,7 +492,7 @@ def detect_vcp(data, window_sizes=[24, 16, 8, 2], image_folder=None):
             points=points,
             lines=lines,
             title='Volatility Contraction Pattern (VCP)',
-            image_name='7_vcp.png',
+            image_name='07_vcp.png',
             image_folder=image_folder
         )
 
@@ -533,7 +534,7 @@ def detect_market_downtrend(data, dow_data, sp500_data, ma_period=25, threshold=
     # どちらかが下降トレンドに入っていれば売りシグナルを出す
     if dow_downtrend or sp500_downtrend:
         # プロットを作成
-        plot_pattern(data=data, title='Market Downtrend', image_name='market_downtrend.png', image_folder=image_folder)
+        plot_pattern(data=data, title='Market Downtrend', image_name='10_market_downtrend.png', image_folder=image_folder)
         return True, data['Close'].iloc[-1]
     else:
         utils.output_log(f"市場全体下降：市場全体は下降トレンドではありませんので、売りは保留です。")
@@ -549,7 +550,7 @@ def detect_moving_average_break(data, ma_period=50, threshold=0.05, image_folder
 
     # 元々移動平均線より上にあり、その後急激に5%以上下回ったかを確認
     if previous_price > previous_ma_value and latest_price < ma_value * (1 - threshold):
-        plot_pattern(data=data, title='Moving Average Break', image_name='moving_average_break.png', image_folder=image_folder)
+        plot_pattern(data=data, title='Moving Average Break', image_name='11_moving_average_break.png', image_folder=image_folder)
         return True, latest_price
     else:
         utils.output_log(f"移動平均線下回り：移動平均線を下回っていませんので、売りは保留です。")
@@ -579,7 +580,7 @@ def detect_climax_top(data, window=4, threshold=0.3, image_folder=None):
     # 30%以上の急上昇を確認し、最大の陽線（出来高の急増）を確認
     if is_recently_rising and (latest_high - latest_low) / latest_low > threshold and recent_volume >= max_volume * 0.9:  # 出来高が最大出来高
         sell_price = latest_high * 0.95  # 高値からの5%下で売り
-        plot_pattern(data=data, points=points, lines=lines, title='Climax Top', image_name='climax_top.png', image_folder=image_folder)
+        plot_pattern(data=data, points=points, lines=lines, title='Climax Top', image_name='13_climax_top.png', image_folder=image_folder)
         return True, sell_price
     else:
         utils.output_log(f"クライマックストップ：最大の陽線と出来高は確認できませんでした。")
@@ -595,7 +596,7 @@ def detect_exhaustion_gap(data, image_folder=None):
     
     if gap_up and high_formed:
         sell_price = data['Close'].iloc[-1]
-        plot_pattern(data=data, title='Exhaustion Gap', image_name='exhaustion_gap.png', image_folder=image_folder)
+        plot_pattern(data=data, title='Exhaustion Gap', image_name='14_exhaustion_gap.png', image_folder=image_folder)
         return True, sell_price
     else:
         return False, None
@@ -668,7 +669,7 @@ def detect_upper_channel_line(data, window=2, channel_multiplier=1.05, image_fol
     points = [
         {'index': idx, 'label': 'High Point', 'color': 'green'} for idx in latest_high_indices
     ]
-    plot_pattern(data=data, lines=lines, points=points, title='Upper Channel Line', image_name='upper_channel_line.png', image_folder=image_folder)
+    plot_pattern(data=data, lines=lines, points=points, title='Upper Channel Line', image_name='12_upper_channel_line.png', image_folder=image_folder)
 
     if latest_price >= upper_line_price:
         return True, latest_price
@@ -698,7 +699,7 @@ def detect_double_top(data, window=10, image_folder=None):
         if abs(data['Close'].iloc[first_peak] - data['Close'].iloc[second_peak]) / data['Close'].iloc[first_peak] < 0.05:
             neckline = data['Close'][first_peak:second_peak+1].min()
             sell_price = neckline * 0.98  # ネックラインを割り込むことで売り
-            plot_pattern(data=data, title='Double Top', image_name='double_top.png', image_folder=image_folder)
+            plot_pattern(data=data, title='Double Top', image_name='15_double_top.png', image_folder=image_folder)
             return True, sell_price
     return False, None
 
@@ -726,7 +727,7 @@ def detect_railroad_tracks(data, image_folder=None):
         latest_candle['Close'] < latest_candle['Open'] and
         abs(prev_candle['Close'] - prev_candle['Open']) * 0.9 < abs(latest_candle['Close'] - latest_candle['Open']) < abs(prev_candle['Close'] - prev_candle['Open']) * 1.1):
         sell_price = latest_candle['Close']
-        plot_pattern(data=data, title='Railroad Tracks', image_name='railroad_tracks.png', image_folder=image_folder)
+        plot_pattern(data=data, title='Railroad Tracks', image_name='16_railroad_tracks.png', image_folder=image_folder)
         return True, sell_price
     else:
         return False, None
