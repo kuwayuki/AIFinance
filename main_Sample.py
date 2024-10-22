@@ -7,7 +7,7 @@ def main():
     prompt = PROMPT_USER["LEADER"].format(
         ticker=ticker,
     )
-    response = utils.sample()
+    response = utils.sample(ticker)
     # response = utils.get_ai_opinion(prompt, PROMPT_SYSTEM["IS_TRUE"])
     # response = utils.get_industry_tickers(ticker)
     print(response)

@@ -52,6 +52,8 @@ def get_buy_sell_prices(tickers, is_output_all_info = False):
                 utils.set_output_log_file_path(ticker, 'all_info', True)
                 utils.all_print(ticker)
 
+            utils.analyst_eval_send(ticker)
+
             utils.set_output_log_file_path(ticker, 'can_slim', True)
             utils.output_log(f"\n★★★{ticker} Start★★★")
 

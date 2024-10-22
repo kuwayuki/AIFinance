@@ -252,10 +252,16 @@ def data_filter_index(data, days=None):
 def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE, is_print = True):
     # gpt-4o-2024-08-06 or o1-preview
     if GPT_MODEL != "o1-preview":
-        response = openai.chat.completions.create(
-            model=GPT_MODEL,
-            messages=[{"role": "system", "content": prompt_system}, {"role": "user", "content": prompt}],
-            temperature=0.01)
+        if prompt_system is not None:
+            response = openai.chat.completions.create(
+                model=GPT_MODEL,
+                messages=[{"role": "system", "content": prompt_system}, {"role": "user", "content": prompt}],
+                temperature=0.01)
+        else:
+            response = openai.chat.completions.create(
+                model=GPT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.01)
     else:
         response = openai.chat.completions.create(
             model=GPT_MODEL,
@@ -561,6 +567,12 @@ def convert_to_weekly(data):
 def convert_keys_to_str(d):
     return {str(k): v for k, v in d.items()}
 
+def convert_dict(d):
+    if hasattr(d, 'to_dict'):
+        d = d.to_dict()
+        d = {str(k): convert_keys_to_str(v) for k, v in d.items()}
+    return d
+
 def jsonOutput(data, title="", is_output=True):
     try:
         if data is None:
@@ -648,7 +660,7 @@ def all_print(ticker):
     jsonOutput(etf.earnings_dates, "収益日")
     jsonOutput(etf.history_metadata, "履歴メタデータ")
     jsonOutput(etf.analyst_price_targets, "アナリスト価格目標")
-    jsonOutput(etf.revenue_estimate, "収益予測")
+    jsonOutput(etf.revenue_estimate, "収益見積もり")
     jsonOutput(etf.earnings_estimate, "収益予測")
     jsonOutput(etf.eps_trend, "収益トレンド")
 
@@ -885,6 +897,34 @@ def filter_can_slim(ticker):
     output_log(f"☆☆CAN-SLIM評価：終了☆☆\n")
     return score, failed_conditions
 
+def analyst_eval(ticker):
+    etf = yf.Ticker(ticker)
+    recommendations = convert_dict(etf.recommendations)
+    recommendations_summary = convert_dict(etf.recommendations_summary)
+    # upgrades_downgrades = convert_dict(etf.upgrades_downgrades)
+    earnings_dates = convert_dict(etf.earnings_dates)
+    analyst_price_targets = convert_dict(etf.analyst_price_targets)
+    revenue_estimate = convert_dict(etf.revenue_estimate)
+    earnings_estimate = convert_dict(etf.earnings_estimate)
+    eps_trend = convert_dict(etf.eps_trend)
+
+    # 各情報を文字列に変換して結合
+    combined_info = f"Recommendations: {recommendations}\n" \
+                    f"Recommendations Summary: {recommendations_summary}\n" \
+                    f"Earnings Dates: {earnings_dates}\n" \
+                    f"Analyst Price Targets: {analyst_price_targets}\n" \
+                    f"Revenue Estimate: {revenue_estimate}\n" \
+                    f"Earnings Estimate: {earnings_estimate}\n" \
+                    f"EPS Trend: {eps_trend}"
+                    # f"Upgrades Downgrades: {upgrades_downgrades}\n" \
+    prompt = PROMPT_USER["ANALYST_EVAL"].format(
+        ticker=ticker,
+        analyst=combined_info,
+        current_date=datetime.now(),
+    )
+    response = get_ai_opinion(prompt, None)
+    return response
+
 def is_new_news(news_list):
     prompt = PROMPT_USER["NEW_PRODUCT"].format(
         product=news_list,
@@ -1022,21 +1062,24 @@ def get_sell_price(data, sp500_data, dow_data, image_folder=None, is_upper_chann
 
     output_log(f"☆☆売り価格：終了☆☆")
 
-def set_output_log_file_path(folder_name=None, file_name=None, is_time_str=False, is_clear=False):
-    global log_file_path
-    if is_clear:
-        log_file_path = None
-        return
-
+def get_output_log_file_path(folder_name=None, file_name=None, is_time_str=False):
     if is_time_str:
         time_str = datetime.now().strftime('%H%M')
         file_name = f'{file_name}_{time_str}.txt'
     else:
         file_name = f'{file_name}.txt'
 
-    log_file_path = os.path.join(create_folder_path(folder_name), file_name)
+    file_path = os.path.join(create_folder_path(folder_name), file_name)
+    return file_path
 
-def output_log(message, is_json = False, title = None, is_print_only = False):
+def set_output_log_file_path(folder_name=None, file_name=None, is_time_str=False, is_clear=False):
+    global log_file_path
+    if is_clear:
+        log_file_path = None
+        return
+    log_file_path = get_output_log_file_path(folder_name, file_name, is_time_str)
+
+def output_log(message, is_json = False, title = None, is_print_only = False, tmp_file_path = None):
     global log_file_path
     out_message = ''
     if title is not None:
@@ -1053,9 +1096,12 @@ def output_log(message, is_json = False, title = None, is_print_only = False):
 
     if log_file_path:
         try:
-            with open(log_file_path, 'a', encoding='utf-8') as file:
-
-                file.write(out_message + '\n')
+            if tmp_file_path is None:
+                with open(log_file_path, 'a', encoding='utf-8') as file:
+                    file.write(out_message + '\n')
+            else:
+                with open(tmp_file_path, 'a', encoding='utf-8') as file:
+                    file.write(out_message + '\n')
         except Exception as e:
             print(f"ファイルの保存中にエラーが発生しました: {e}")
     return message
@@ -1079,5 +1125,10 @@ def send_line_log_text():
     if text:
         send_line_notify(text)
 
-def sample():
-    print("sample")
+def analyst_eval_send(ticker):
+    eval = analyst_eval(ticker)
+    output_log(eval, tmp_file_path = get_output_log_file_path(ticker, 'eval', True))
+    send_line_notify(eval)
+
+def sample(ticker):
+    analyst_eval(ticker)
