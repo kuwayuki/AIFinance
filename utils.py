@@ -1128,7 +1128,7 @@ def send_line_log_text():
 def analyst_eval_send(ticker):
     eval = analyst_eval(ticker)
     output_log(eval, tmp_file_path = get_output_log_file_path(ticker, 'eval', True))
-    send_line_notify(eval)
+    send_line_notify(f"\n★★★{ticker}★★★\n" + eval)
 
 def sample(ticker):
     analyst_eval(ticker)
