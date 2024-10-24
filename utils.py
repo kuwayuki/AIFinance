@@ -272,11 +272,14 @@ def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE, is_print = True):
         print(result)
     return result
 
-def send_line_notify(notification_message):
+def send_line_notify(notification_message, title = None):
     line_notify_token = 'Z392GKtaICiiiSndtfrKqDmYliv8df5S9AIekyPpSoa'
     line_notify_api = 'https://notify-api.line.me/api/notify'
     headers = {'Authorization': f'Bearer {line_notify_token}'}
     
+    if title is not None:
+        notification_message = f"<{title}>\n{notification_message}"
+
     # メッセージが1000文字を超える場合、分割して送信
     max_length = 1000
     print(notification_message)
@@ -678,17 +681,17 @@ def all_print(ticker):
     # ISIN情報
     jsonOutput(etf.isin, "国際証券識別番号（ISIN）")
 
-def filter_can_slim(ticker):
+def filter_can_slim(ticker, is_send_news = True):
     # return all_print(ticker)
     output_log(f"\n☆☆CAN-SLIM評価：開始☆☆")
-    ticker = yf.Ticker(ticker)
+    tickerInfo = yf.Ticker(ticker)
     
     score = 0
     failed_conditions = 0
     eps_under = CONSTANT["EPS"]
 
     # C (Current Quarterly Earnings and Sales): 四半期EPS成長を確認
-    quarterly_earnings = ticker.quarterly_earnings
+    quarterly_earnings = tickerInfo.quarterly_earnings
     if quarterly_earnings is not None and not quarterly_earnings.empty:
         # 四半期ごとのEPS成長率を計算し、25%以上の成長が複数回確認できるかをチェック
         quarterly_growth_count = 0
@@ -709,7 +712,7 @@ def filter_can_slim(ticker):
     else:
         output_log(f"C：四半期EPSデータがありません。Reported EPSデータを代用します。")
         # Reported EPSデータを代用
-        earnings_data = ticker.earnings_dates
+        earnings_data = tickerInfo.earnings_dates
         if earnings_data is not None:
             # Reported EPS から有効な四半期EPSデータを取得
             reported_eps = earnings_data.get('Reported EPS', {})
@@ -743,7 +746,7 @@ def filter_can_slim(ticker):
             failed_conditions += 1
 
     # A (Annual Earnings Increases): 年間EPSの成長を確認
-    income_statement = ticker.income_stmt
+    income_statement = tickerInfo.income_stmt
     if income_statement is not None and not income_statement.empty:
         # EPSデータを取得し、なければNet Incomeを代用
         if 'Diluted EPS' in income_statement.index:
@@ -782,7 +785,7 @@ def filter_can_slim(ticker):
         failed_conditions += 1
 
     # N (New Products, Management, or Conditions): 最近のニュースから新製品や経営の変化をチェック
-    news = ticker.news
+    news = tickerInfo.news
     if news is not None:
         new_product_or_management = False
         recent_weeks = pd.Timestamp.now() - pd.Timedelta(weeks=2)
@@ -800,6 +803,14 @@ def filter_can_slim(ticker):
             output_log(f"N：◎新製品または経営の変化に関するニュースが見つかりました")
             news_summary = get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"])
             output_log(news_summary)
+            if is_send_news:
+                split_news_summary = news_summary.split('\n')
+                news_list_send = []
+                for index, line in enumerate(split_news_summary):
+                    news_list_send.append(f"{line}")
+                    news_list_send.append(f"{news_link_list[index]}")
+                send_line_notify("\n".join(news_list_send), f"{ticker}-News")
+
             for link in news_link_list:
                 output_log(link + '\n', is_print_only=True)
             # output_log(get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"]))
@@ -812,7 +823,7 @@ def filter_can_slim(ticker):
         failed_conditions += 1
 
     # S (Supply and Demand): 過去1年の出来高データを取得して、最近の増加を確認
-    historical_data = ticker.history(period="1y")
+    historical_data = tickerInfo.history(period="1y")
     if not historical_data.empty:
         volume_data = historical_data['Volume']
         recent_max_volume = volume_data[-4:].max()  # 直近4週間の最大出来高
@@ -846,8 +857,8 @@ def filter_can_slim(ticker):
     max_retries = 3
     while retries < max_retries:
         try: 
-            major_holders = ticker.major_holders
-            institutional_holders = ticker.institutional_holders
+            major_holders = tickerInfo.major_holders
+            institutional_holders = tickerInfo.institutional_holders
             if institutional_holders is not None and not institutional_holders.empty:
                 # Date Reportedで直近のデータを絞り込む
                 institutional_holders['Date Reported'] = pd.to_datetime(institutional_holders['Date Reported'])
