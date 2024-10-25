@@ -802,7 +802,6 @@ def filter_can_slim(ticker, is_send_news = True):
         if new_product_or_management and is_new_news("\n".join(news_list)):
             output_log(f"N：◎新製品または経営の変化に関するニュースが見つかりました")
             news_summary = get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"])
-            output_log(news_summary)
             if is_send_news:
                 split_news_summary = news_summary.split('\n')
                 news_list_send = []
@@ -810,7 +809,7 @@ def filter_can_slim(ticker, is_send_news = True):
                     news_list_send.append(f"{line}")
                     news_list_send.append(f"{news_link_list[index]}")
                 send_line_notify("\n".join(news_list_send), f"{ticker}-News")
-
+            output_log("\n".join(news_list_send))
             for link in news_link_list:
                 output_log(link + '\n', is_print_only=True)
             # output_log(get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"]))
@@ -1131,10 +1130,14 @@ def get_log_text():
         print("ログファイルパスが設定されていません。")
     return None
 
-def send_line_log_text():
+def send_line_log_text(is_include_https = True):
     text = get_log_text()
     if text:
-        send_line_notify(text)
+        if is_include_https is False:
+            filtered_text = [line for line in text.split('\n') if 'https' not in line]
+            text = '\n'.join(filtered_text)
+        if text:
+            send_line_notify(text)
 
 def analyst_eval_send(ticker):
     eval = analyst_eval(ticker)

@@ -62,7 +62,7 @@ def get_buy_sell_prices(tickers, is_output_all_info = False):
                 if is_future:
                     MainPy.future(ticker, False)
                 utils.get_buy_sell_price(ticker)
-                utils.send_line_log_text()
+                utils.send_line_log_text(False)
             else:
                 utils.output_log(f"評価が低いので確認しません。")
             # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
