@@ -681,6 +681,20 @@ def all_print(ticker):
     # ISIN情報
     jsonOutput(etf.isin, "国際証券識別番号（ISIN）")
 
+# データ取得の再試行設定
+def get_data_with_retry(fetch_function, retries=3, wait=3):
+    attempts = 0
+    while attempts < retries:
+        try:
+            data = fetch_function()
+            if data is not None:
+                return convert_dict(data)
+        except Exception as e:
+            print(f"Error fetching data: {e}. Retrying {attempts + 1}/{retries}...")
+            attempts += 1
+            time.sleep(wait)
+    return None  # 取得失敗の場合はNoneを返す
+
 def filter_can_slim(ticker, is_send_news = True):
     # return all_print(ticker)
     output_log(f"\n☆☆CAN-SLIM評価：開始☆☆")
@@ -909,14 +923,14 @@ def filter_can_slim(ticker, is_send_news = True):
 
 def analyst_eval(ticker):
     etf = yf.Ticker(ticker)
-    recommendations = convert_dict(etf.recommendations)
-    recommendations_summary = convert_dict(etf.recommendations_summary)
-    # upgrades_downgrades = convert_dict(etf.upgrades_downgrades)
-    earnings_dates = convert_dict(etf.earnings_dates)
-    analyst_price_targets = convert_dict(etf.analyst_price_targets)
-    revenue_estimate = convert_dict(etf.revenue_estimate)
-    earnings_estimate = convert_dict(etf.earnings_estimate)
-    eps_trend = convert_dict(etf.eps_trend)
+    # データ取得
+    recommendations = get_data_with_retry(lambda: etf.recommendations)
+    recommendations_summary = get_data_with_retry(lambda: etf.recommendations_summary)
+    earnings_dates = get_data_with_retry(lambda: etf.earnings_dates)
+    analyst_price_targets = get_data_with_retry(lambda: etf.analyst_price_targets)
+    revenue_estimate = get_data_with_retry(lambda: etf.revenue_estimate)
+    earnings_estimate = get_data_with_retry(lambda: etf.earnings_estimate)
+    eps_trend = get_data_with_retry(lambda: etf.eps_trend)
 
     # 各情報を文字列に変換して結合
     combined_info = f"Recommendations: {recommendations}\n" \
