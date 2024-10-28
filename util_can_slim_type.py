@@ -13,6 +13,7 @@ def try_catch_decorator(func):
             return result
         except Exception as e:
             print(f"エラーが発生しました: {e}")
+            return False, None
         finally:
             print("終了処理を実行中です")
     return wrapper
