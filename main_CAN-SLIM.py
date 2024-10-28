@@ -10,13 +10,12 @@ import output_csv
 # プロンプトをインポート
 from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
-tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['AVGO']  # 複数ティッカーをカンマ区切りで受け取る
+tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['NVDA']  # 複数ティッカーをカンマ区切りで受け取る
 folder_path = ''
 is_future = sys.argv[2] == True if len(sys.argv) > 2 else False # 未来予測も確認
 
 def main(tickers):
     global folder_path
-    folder_path = utils.create_folder_path(','.join(tickers))
 
     # 1. CAN-SLIM法で選定された銘柄を配列指定
     # can_slim_tickers = filter_can_slim(tickers)
@@ -27,6 +26,7 @@ def main(tickers):
 
 # CAN-SLIM法の銘柄から直近のニュースを考慮して銘柄を絞り込む
 def filter_can_slim(tickers):
+    folder_path = utils.create_folder_path(','.join(tickers))
     file_path = os.path.join(folder_path, 'research.csv')
     output_csv.mains(tickers, file_path)
     
