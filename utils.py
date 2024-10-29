@@ -19,6 +19,7 @@ from scipy.stats import linregress
 from scipy.signal import argrelextrema
 import numpy as np
 from yahooquery import Ticker
+# from sec_edgar_downloader import Downloader
  # pip install scipy
 # import fredapi
 
@@ -682,7 +683,7 @@ def all_print(ticker):
     jsonOutput(etf.isin, "国際証券識別番号（ISIN）")
 
 # データ取得の再試行設定
-def get_data_with_retry(fetch_function, retries=3, wait=3):
+def get_data_with_retry(fetch_function, retries=3, wait=10):
     attempts = 0
     while attempts < retries:
         try:
@@ -941,10 +942,17 @@ def analyst_eval(ticker):
                     f"Earnings Estimate: {earnings_estimate}\n" \
                     f"EPS Trend: {eps_trend}"
                     # f"Upgrades Downgrades: {upgrades_downgrades}\n" \
+
+    have_finance_info = ""
+    have_finance=read_news_from_csv('./csv/IHaveFinance.csv', 'shift_jis', ticker)
+    if have_finance.count("\n") > 0:
+        have_finance_info = f"現在の株の保有数は下記です。全てあるいは部分的に売る必要があるときは教えてください。\n{have_finance}"
+
     prompt = PROMPT_USER["ANALYST_EVAL"].format(
         ticker=ticker,
         analyst=combined_info,
         current_date=datetime.now(),
+        have_finance_info=have_finance_info,
     )
     response = get_ai_opinion(prompt, None)
     return response
@@ -1160,4 +1168,7 @@ def analyst_eval_send(ticker):
     send_line_notify(f"\n★★★{ticker}★★★\n" + eval_clean)
 
 def sample(ticker):
-    analyst_eval(ticker)
+    print(ticker)
+    # dl = Downloader("./history/", email_address="ee68028@gmail.com")
+    # dl.get("SC 13G", ticker)  # 'AAPL'の13Fフォームをダウンロード
+    # dl.get("SC 13G", ticker, limit=1, download_details=False)

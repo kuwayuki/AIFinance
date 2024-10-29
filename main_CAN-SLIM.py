@@ -10,7 +10,7 @@ import output_csv
 # プロンプトをインポート
 from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
-tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['NVDA']  # 複数ティッカーをカンマ区切りで受け取る
+tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['NFLX']  # 複数ティッカーをカンマ区切りで受け取る
 folder_path = ''
 is_future = sys.argv[2] == True if len(sys.argv) > 2 else False # 未来予測も確認
 

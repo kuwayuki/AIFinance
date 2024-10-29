@@ -30,6 +30,8 @@ PROMPT_USER = {
     6. 推奨する購入価格
     7. 損切価格
 
+    {have_finance_info}
+
     今日は{current_date}です。
     """,
 }
