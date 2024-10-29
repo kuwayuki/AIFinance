@@ -817,12 +817,13 @@ def filter_can_slim(ticker, is_send_news = True):
         if new_product_or_management and is_new_news("\n".join(news_list)):
             output_log(f"N：◎新製品または経営の変化に関するニュースが見つかりました")
             news_summary = get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"])
+            split_news_summary = news_summary.split('\n')
+            news_list_send = []
+            for index, line in enumerate(split_news_summary):
+                news_list_send.append(f"{line}")
+                news_list_send.append(f"{news_link_list[index]}")
+            
             if is_send_news:
-                split_news_summary = news_summary.split('\n')
-                news_list_send = []
-                for index, line in enumerate(split_news_summary):
-                    news_list_send.append(f"{line}")
-                    news_list_send.append(f"{news_link_list[index]}")
                 send_line_notify("\n".join(news_list_send), f"{ticker}-News")
             output_log("\n".join(news_list_send))
             for link in news_link_list:
