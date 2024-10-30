@@ -824,7 +824,8 @@ def filter_can_slim(ticker, is_send_news = False):
             news_list_send = []
             for index, line in enumerate(split_news_summary):
                 news_list_send.append(f"{line}")
-                news_list_send.append(f"{news_link_list[index]}")
+                if len(news_link_list) > index:
+                    news_list_send.append(f"{news_link_list[index]}")
             
             if is_send_news:
                 send_line_notify("\n".join(news_list_send), f"{ticker}-News")
