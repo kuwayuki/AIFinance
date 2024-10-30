@@ -696,7 +696,7 @@ def get_data_with_retry(fetch_function, retries=3, wait=10):
             time.sleep(wait)
     return None  # 取得失敗の場合はNoneを返す
 
-def filter_can_slim(ticker, is_send_news = True):
+def filter_can_slim(ticker, is_send_news = False):
     # return all_print(ticker)
     output_log(f"\n☆☆CAN-SLIM評価：開始☆☆")
     tickerInfo = yf.Ticker(ticker)
@@ -933,6 +933,18 @@ def analyst_eval(ticker):
     revenue_estimate = get_data_with_retry(lambda: etf.revenue_estimate)
     earnings_estimate = get_data_with_retry(lambda: etf.earnings_estimate)
     eps_trend = get_data_with_retry(lambda: etf.eps_trend)
+    news = etf.news
+    news_summary = ""
+    if news is not None:
+        recent_weeks = pd.Timestamp.now() - pd.Timedelta(weeks=2)
+        news_list = []
+        for item in news:
+            news_date = pd.to_datetime(item['providerPublishTime'], unit='s')
+            if news_date > recent_weeks:
+                news = f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}"
+                news_list.append(news)
+        news_summary = f"最近のニュースは下記です。良いニュースと悪いニュースが「価格」に影響することも反映してください。\n"
+        news_summary += get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"])
 
     # 各情報を文字列に変換して結合
     combined_info = f"Recommendations: {recommendations}\n" \
@@ -954,7 +966,9 @@ def analyst_eval(ticker):
         analyst=combined_info,
         current_date=datetime.now(),
         have_finance_info=have_finance_info,
+        news=news_summary,
     )
+    print(prompt)
     response = get_ai_opinion(prompt, None)
     return response
 

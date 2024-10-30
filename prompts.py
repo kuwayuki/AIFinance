@@ -21,6 +21,11 @@ PROMPT_USER = {
 
     {analyst}
 
+    {have_finance_info}
+
+    {news}
+
+
     1~3は10点満点でお願いします。
     1. 評価数
     2. 短期的な株価の上昇性
@@ -29,8 +34,6 @@ PROMPT_USER = {
     5. 現実的な売り価格（「推奨する購入価格」からの上昇率%）と到達する確率%、時期
     6. 推奨する購入価格
     7. 損切価格
-
-    {have_finance_info}
 
     今日は{current_date}です。
     """,

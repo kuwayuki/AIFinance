@@ -1,0 +1,2 @@
+cd /d %~dp0
+python .\main_CAN-SLIM.py "AAPL,AMZN,AVGO,GOOGL,JNJ,MSFT,NVDA,ORCL,SNPS,UBER"

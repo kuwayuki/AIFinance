@@ -47,7 +47,6 @@ def get_buy_sell_prices(tickers, is_output_all_info = False):
         #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
         # utils.get_buy_sell_price(ticker)
         try:
-
             if is_output_all_info:
                 utils.set_output_log_file_path(ticker, 'all_info', True)
                 utils.all_print(ticker)
