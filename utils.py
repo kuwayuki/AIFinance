@@ -19,11 +19,14 @@ from scipy.stats import linregress
 from scipy.signal import argrelextrema
 import numpy as np
 from yahooquery import Ticker
+# import finnhub
 # from sec_edgar_downloader import Downloader
  # pip install scipy
 # import fredapi
 
 # https://developer.ft.com/portal/docs-start-commence-making-requests
+
+# finnhub_client = finnhub.Client(api_key="csguqkpr01qldu0cveb0csguqkpr01qldu0cvebg")
 
 log_file_path = ''
 def load_config(config_path = "./config/config.json"):
@@ -1184,6 +1187,7 @@ def analyst_eval_send(ticker):
 
 def sample(ticker):
     print(ticker)
+    # print(finnhub_client.fund_ownership(ticker, limit=5))
     # dl = Downloader("./history/", email_address="ee68028@gmail.com")
     # dl.get("SC 13G", ticker)  # 'AAPL'の13Fフォームをダウンロード
     # dl.get("SC 13G", ticker, limit=1, download_details=False)
