@@ -20,6 +20,7 @@ def main(tickers):
     # 1. CAN-SLIM法で選定された銘柄を配列指定
     # can_slim_tickers = filter_can_slim(tickers)
     can_slim_tickers = tickers
+    output_csv.mains(tickers)
 
     # 2. 各手法で売買価格を判断
     get_buy_sell_prices(can_slim_tickers)
