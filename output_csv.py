@@ -7,7 +7,7 @@ import pandas as pd
 import json
 
 # デフォルトのティッカーシンボルのリスト
-DEFAULT = ["CVX","CAT","PEP","KO","BAC","GS","MS","JNJ","MRK","AAPL","NVDA","INTC","AVGO","GOOGL","MSFT","META","BABA","IBM","ORCL","VZ","ASML","LRCX","MCHP","ON","SWKS","CTSH","BIDU","NTES","WIT","EBAY","ABNB","EA","ZM","IQ","TME","AKAM","GEN","FFIV","DBX","CHKP","ZI","BOX","FIS","STNE","FUTU"]
+DEFAULT = ["AAPL"]
 
 tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else DEFAULT
 
@@ -84,7 +84,11 @@ def calculate_profit_margins(ticker):
 
                 if profit is not None and revenue != 0:
                     margins[period] = format_percentage(profit / revenue)
-                margins[f"売上高({2 - i}期前)"] = format_decimal(revenue)
+
+                if i == 0:
+                    margins["売上高(今年)"] = format_decimal(revenue)
+                else:
+                    margins[f"売上高({i}期前)"] = format_decimal(revenue)
 
         return margins
 
@@ -498,6 +502,7 @@ def save_etf_data(ticker, file_path, include_canslim_data=False, include_investm
         "ROE",
         "売上高(2期前)",
         "売上高(1期前)",
+        "売上高(今年)",
         "現在の株価",
         "最高値(2期前)",
         "最安値(2期前)",

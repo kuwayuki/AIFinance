@@ -789,7 +789,8 @@ def filter_can_slim(ticker, is_send_news = False):
                 if i == len(annual_earnings) - 1:
                     latest_growth_rate = growth_rate
             
-            if latest_growth_rate is not None and latest_growth_rate > eps_under and annual_growth_count >= 2:  # 直近の成長も含めて評価
+            if latest_growth_rate is not None and latest_growth_rate > eps_under:  # 直近の成長も含めて評価
+            # if latest_growth_rate is not None and latest_growth_rate > eps_under and annual_growth_count >= 2:  # 直近の成長も含めて評価
                 output_log(f"A：◎年間EPS成長率が{eps_under}%以上です。")
                 score += 1
             else:
