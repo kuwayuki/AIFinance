@@ -12,7 +12,7 @@ from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
 tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['NFLX']  # 複数ティッカーをカンマ区切りで受け取る
 folder_path = ''
-is_future = sys.argv[2] == True if len(sys.argv) > 2 else False # 未来予測も確認
+is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
 
 def main(tickers):
     global folder_path
@@ -61,6 +61,7 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
             if score > 2:
                 if is_future:
                     MainPy.future(ticker, False)
+
                 utils.get_buy_sell_price(ticker)
                 if is_send_line:
                     utils.send_line_log_text(False)
