@@ -253,19 +253,19 @@ def data_filter_index(data, days=None):
     return data
 
 # AIの意見を取得
-def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE, is_print = True):
+def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE, is_print = True, temperature = 0.01):
     # gpt-4o-2024-08-06 or o1-preview
     if GPT_MODEL != "o1-preview":
         if prompt_system is not None:
             response = openai.chat.completions.create(
                 model=GPT_MODEL,
                 messages=[{"role": "system", "content": prompt_system}, {"role": "user", "content": prompt}],
-                temperature=0.01)
+                temperature=temperature)
         else:
             response = openai.chat.completions.create(
                 model=GPT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.01)
+                temperature=temperature)
     else:
         response = openai.chat.completions.create(
             model=GPT_MODEL,
@@ -974,7 +974,7 @@ def analyst_eval(ticker):
         news=news_summary,
     )
     print(prompt)
-    response = get_ai_opinion(prompt, None)
+    response = get_ai_opinion(prompt, None, temperature=0)
     return response
 
 def is_new_news(news_list):
