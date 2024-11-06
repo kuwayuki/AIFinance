@@ -8,13 +8,13 @@ app = Flask(__name__)
 def run_future():
     # リクエストからパラメータを取得
     data = request.get_json()
-    print(data)
     tickers = data.get('tickers')
-    # flag = data.get('flag', False)
+    is_output_all_info = data.get('flag', False)
+    is_send_line = data.get('flag', True)
 
     # main.py内のfuture関数を呼び出し
     try:
-        result = MainPy.main(tickers)
+        result = MainPy.main(tickers, is_output_all_info = is_output_all_info, is_send_line = is_send_line)
         return jsonify({"result": result}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
