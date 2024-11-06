@@ -4,7 +4,7 @@ import main_CAN_SLIM as MainPy  # main.pyをインポート
 
 app = Flask(__name__)
 
-@app.route('/run-future', methods=['POST'])
+@app.route('/main', methods=['POST'])
 def run_future():
     # リクエストからパラメータを取得
     data = request.get_json()
