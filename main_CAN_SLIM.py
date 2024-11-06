@@ -10,7 +10,8 @@ import output_csv
 # プロンプトをインポート
 from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
-tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['NFLX']  # 複数ティッカーをカンマ区切りで受け取る
+# 複数ティッカーをカンマ区切りで受け取り、空白を削除し大文字に変換
+tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['NFLX']
 folder_path = ''
 is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
 

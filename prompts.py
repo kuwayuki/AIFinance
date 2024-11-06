@@ -9,7 +9,7 @@ PROMPT_SYSTEM = {
 PROMPT_USER = {
     "TOP5": "{ticker}と同じ業界・セクターと同じ銘柄のシンボルのみを上から順に売上トップ5（{ticker}を含む）で教えてください",
     "LEADER": "{ticker}と同じ業界またはセクターの中で、{ticker}がCANSLIMのLになりうる独自の製品があるかを教えてください",
-    "NEW_PRODUCT": """下記の中で馴染みのないワードがあるかを教えてください
+    "NEW_PRODUCT": """下記の中でCANSLIMのNになりうる新しいキーワードなどのニュースがあるかを教えてください
     {product}
     """,
     "SAMPLE": """
