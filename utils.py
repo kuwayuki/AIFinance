@@ -1,4 +1,5 @@
 import yfinance as yf
+import gspread
 import pandas as pd
 import openai
 import matplotlib.pyplot as plt
@@ -928,7 +929,7 @@ def filter_can_slim(ticker, is_send_news = False):
     output_log(f"☆☆CAN-SLIM評価：終了☆☆\n")
     return score, failed_conditions
 
-def analyst_eval(ticker):
+def analyst_eval(ticker, is_write_g_spread = False):
     etf = yf.Ticker(ticker)
     # データ取得
     recommendations = get_data_with_retry(lambda: etf.recommendations)
@@ -965,6 +966,9 @@ def analyst_eval(ticker):
     have_finance=read_news_from_csv('./csv/IHaveFinance.csv', 'shift_jis', ticker)
     if have_finance.count("\n") > 0:
         have_finance_info = f"現在の株の保有数は下記です。全てあるいは部分的に売る必要があるときは教えてください。\n{have_finance}"
+    last_arrays = ""
+    if is_write_g_spread:
+        last_arrays = "最後の行に文字列配列で[現在価格, 推奨する購入価格, スイングトレードの売り価格, 現実的な売り価格, 理想的な売り価格, 損切価格]の値のみを記載して下さい。"
 
     prompt = PROMPT_USER["ANALYST_EVAL"].format(
         ticker=ticker,
@@ -972,6 +976,7 @@ def analyst_eval(ticker):
         current_date=datetime.now(),
         have_finance_info=have_finance_info,
         news=news_summary,
+        last_arrays=last_arrays,
     )
     print(prompt)
     response = get_ai_opinion(prompt, None, temperature=0)
@@ -1181,14 +1186,67 @@ def send_line_log_text(is_include_https = True):
         if text:
             send_line_notify(text)
 
-def analyst_eval_send(ticker):
-    eval = analyst_eval(ticker)
-    eval_clean = re.sub(r'[\*\#\_]+', '', eval)
+def g_spread_write(ticker, arrays):
+    print("スプレッドシートに記載します。")
+    print(arrays)
+    SHEET_KEY = "1bVZTZOR4WO4pttcjwypudEIsv7OZViQif0kZn0wu7SE"
+    SHEET_NAME = "Sample"
+
+    gc = gspread.oauth(
+                    credentials_filename="./config/client_secret_836067786046-8iomn415540st6jpmj2f3plko7kuh63l.apps.googleusercontent.com.json", # 認証用のJSONファイル
+                    authorized_user_filename="./config/authorized_user.json"
+                    )
+    sh = gc.open_by_key(SHEET_KEY)
+    worksheet = sh.worksheet(SHEET_NAME)
+    # C列（3列目）を全て取得して、tickerの行を検索
+    tickers = worksheet.col_values(3)
+    try:
+        row = tickers.index(ticker) + 1  # Pythonのindexは0から始まるため、シートの行に合わせて+1
+    except ValueError:
+        print(f"Ticker '{ticker}' not found in column C.")
+        return
+
+    worksheet.update("M" + str(row), arrays[0])
+    worksheet.update("Z" + str(row), arrays[1])
+    worksheet.update("AA" + str(row), arrays[2])
+    worksheet.update("AC" + str(row), arrays[3])
+    worksheet.update("AE" + str(row), arrays[4])
+    worksheet.update("AG" + str(row), arrays[5])
+
+def get_last_line_of_multiline_string(input_string):
+    lines = input_string.strip().split('\n')
+    # 最後の行に "[" などが含まれていない場合はその1行前を取得
+    if not any(char in lines[-1] for char in "[]"):
+        return lines[-2] if len(lines) > 1 else lines[-1]
+    return lines[-1]
+
+def analyst_eval_send(ticker, is_write_g_spread = False):
+    ticker_eval = analyst_eval(ticker, is_write_g_spread)
+    eval_clean = re.sub(r'[\*\#\_]+', '', ticker_eval)
     output_log(eval_clean, tmp_file_path = get_output_log_file_path(ticker, 'eval', True))
     send_line_notify(f"\n★★★{ticker}★★★\n" + eval_clean)
 
+    if is_write_g_spread:
+        array_values = get_last_line_of_multiline_string(eval_clean)
+        if isinstance(array_values, list):
+            print("list")
+            arrays = array_values
+        else:
+            try:
+                print("plaintext")
+                arrays = eval(array_values)
+            except:
+                # 不正な文字列の場合は警告を出して無視する
+                print("Invalid input for array values. Ignoring input and proceeding.")
+        try:
+            g_spread_write(ticker, arrays)
+        except:
+            print("Error")
+
 def sample(ticker):
     print(ticker)
+    analyst_eval_send(ticker)
+    # g_spread_write(ticker, ["ABC", "DEF"])
     # print(finnhub_client.fund_ownership(ticker, limit=5))
     # dl = Downloader("./history/", email_address="ee68028@gmail.com")
     # dl.get("SC 13G", ticker)  # 'AAPL'の13Fフォームをダウンロード

@@ -15,7 +15,7 @@ tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(s
 folder_path = ''
 is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
 
-def main(tickers, is_output_all_info = False, is_send_line = False):
+def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True):
     global folder_path
 
     # 1. CAN-SLIM法で選定された銘柄を配列指定
@@ -24,7 +24,7 @@ def main(tickers, is_output_all_info = False, is_send_line = False):
     output_csv.mains(tickers)
 
     # 2. 各手法で売買価格を判断
-    get_buy_sell_prices(can_slim_tickers, is_output_all_info, is_send_line)
+    get_buy_sell_prices(can_slim_tickers, is_output_all_info, is_send_line, is_write_g_spread)
 
 # CAN-SLIM法の銘柄から直近のニュースを考慮して銘柄を絞り込む
 def filter_can_slim(tickers):
@@ -40,7 +40,7 @@ def filter_can_slim(tickers):
     )
     return utils.get_ai_opinion(prompt, PROMPT_CAN_SLIM_SYSTEM)
 
-def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = False):
+def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = False):
     for ticker in tickers:
         # industry, sector = utils.get_industry_tickers(ticker)
         # if industry and sector:
@@ -54,7 +54,7 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
                 utils.all_print(ticker)
 
             utils.set_output_log_file_path(ticker, 'can_slim', True)
-            utils.analyst_eval_send(ticker)
+            utils.analyst_eval_send(ticker, is_write_g_spread)
 
             utils.output_log(f"\n★★★{ticker} Start★★★")
 

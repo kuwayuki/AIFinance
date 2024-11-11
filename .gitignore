@@ -2,6 +2,7 @@
 
 # dependencies
 history/
+config/
 __pycache__/
 config.json
 *.csv

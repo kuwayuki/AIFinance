@@ -36,6 +36,8 @@ PROMPT_USER = {
     8. 損切価格
 
     今日は{current_date}です。
+
+    {last_arrays}
     """,
 }
 
