@@ -1190,7 +1190,7 @@ def g_spread_write(ticker, arrays):
     print("スプレッドシートに記載します。")
     print(arrays)
     SHEET_KEY = "1bVZTZOR4WO4pttcjwypudEIsv7OZViQif0kZn0wu7SE"
-    SHEET_NAME = "Sample"
+    SHEET_NAME = "AI SEED"
 
     gc = gspread.oauth(
                     credentials_filename="./config/client_secret_836067786046-8iomn415540st6jpmj2f3plko7kuh63l.apps.googleusercontent.com.json", # 認証用のJSONファイル
@@ -1206,12 +1206,12 @@ def g_spread_write(ticker, arrays):
         print(f"Ticker '{ticker}' not found in column C.")
         return
 
-    worksheet.update("M" + str(row), arrays[0])
-    worksheet.update("Z" + str(row), arrays[1])
-    worksheet.update("AA" + str(row), arrays[2])
-    worksheet.update("AC" + str(row), arrays[3])
-    worksheet.update("AE" + str(row), arrays[4])
-    worksheet.update("AG" + str(row), arrays[5])
+    worksheet.update_acell("M" + str(row), arrays[0])
+    worksheet.update_acell("Z" + str(row), arrays[1])
+    worksheet.update_acell("AA" + str(row), arrays[2])
+    worksheet.update_acell("AC" + str(row), arrays[3])
+    worksheet.update_acell("AE" + str(row), arrays[4])
+    worksheet.update_acell("AG" + str(row), arrays[5])
 
 def get_last_line_of_multiline_string(input_string):
     lines = input_string.strip().split('\n')
@@ -1240,8 +1240,8 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
                 print("Invalid input for array values. Ignoring input and proceeding.")
         try:
             g_spread_write(ticker, arrays)
-        except:
-            print("Error")
+        except Exception as e:
+            print(e)
 
 def sample(ticker):
     print(ticker)
