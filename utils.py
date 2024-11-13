@@ -968,7 +968,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
         have_finance_info = f"現在の株の保有数は下記です。全てあるいは部分的に売る必要があるときは教えてください。\n{have_finance}"
     last_arrays = ""
     if is_write_g_spread:
-        last_arrays = "最後の行に文字列配列で[現在価格, 推奨する購入価格, スイングトレードの売り価格, 現実的な売り価格, 理想的な売り価格, 損切価格]の値のみを記載して下さい。"
+        last_arrays = "最後の行に文字列配列で[現在価格, 推奨する購入価格, スイングトレードの売り価格, 到達する確率, 現実的な売り価格, 到達する確率, 理想的な売り価格, 到達する確率, 損切価格]の値のみを記載して下さい。"
 
     prompt = PROMPT_USER["ANALYST_EVAL"].format(
         ticker=ticker,
@@ -1186,18 +1186,28 @@ def send_line_log_text(is_include_https = True):
         if text:
             send_line_notify(text)
 
-def g_spread_write(ticker, arrays):
-    print("スプレッドシートに記載します。")
-    print(arrays)
+def g_spread_read_worksheet():
     SHEET_KEY = "1bVZTZOR4WO4pttcjwypudEIsv7OZViQif0kZn0wu7SE"
     SHEET_NAME = "AI SEED"
-
     gc = gspread.oauth(
                     credentials_filename="./config/client_secret_836067786046-8iomn415540st6jpmj2f3plko7kuh63l.apps.googleusercontent.com.json", # 認証用のJSONファイル
                     authorized_user_filename="./config/authorized_user.json"
                     )
     sh = gc.open_by_key(SHEET_KEY)
     worksheet = sh.worksheet(SHEET_NAME)
+    return worksheet
+
+def g_spread_read():
+    worksheet = g_spread_read_worksheet()
+    value = worksheet.acell("A1").value
+    print(value)
+    return value
+
+def g_spread_write(ticker, arrays):
+    print("スプレッドシートに記載します。")
+    arrays = [str(value).replace('%', '') if isinstance(value, str) and '%' in value else value for value in arrays]
+    print(arrays)
+    worksheet = g_spread_read_worksheet()
     # C列（3列目）を全て取得して、tickerの行を検索
     tickers = worksheet.col_values(3)
     try:
@@ -1206,12 +1216,14 @@ def g_spread_write(ticker, arrays):
         print(f"Ticker '{ticker}' not found in column C.")
         return
 
-    worksheet.update_acell("M" + str(row), arrays[0])
-    worksheet.update_acell("Z" + str(row), arrays[1])
-    worksheet.update_acell("AA" + str(row), arrays[2])
-    worksheet.update_acell("AC" + str(row), arrays[3])
-    worksheet.update_acell("AE" + str(row), arrays[4])
-    worksheet.update_acell("AG" + str(row), arrays[5])
+    worksheet.update_acell("M" + str(row), arrays[0]) # 現在
+    worksheet.update_acell("Z" + str(row), arrays[1]) # 買い価格
+    worksheet.update_acell("AA" + str(row), arrays[2]) # スイングトレード（価格）
+    worksheet.update_acell("AC" + str(row), arrays[3]) # スイングトレード（%）
+    worksheet.update_acell("AD" + str(row), arrays[4]) # 現実（価格）
+    worksheet.update_acell("AF" + str(row), arrays[5]) # 現実（%）
+    worksheet.update_acell("AG" + str(row), arrays[6]) # 理想（価格）
+    worksheet.update_acell("AI" + str(row), arrays[7]) # 理想（%）
 
 def get_last_line_of_multiline_string(input_string):
     lines = input_string.strip().split('\n')
@@ -1245,7 +1257,7 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
 
 def sample(ticker):
     print(ticker)
-    analyst_eval_send(ticker)
+    analyst_eval_send(ticker, True)
     # g_spread_write(ticker, ["ABC", "DEF"])
     # print(finnhub_client.fund_ownership(ticker, limit=5))
     # dl = Downloader("./history/", email_address="ee68028@gmail.com")
