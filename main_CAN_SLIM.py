@@ -42,6 +42,7 @@ def filter_can_slim(tickers):
 
 def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = False):
     for ticker in tickers:
+        utils.g_spread_write_data(ticker)
         # industry, sector = utils.get_industry_tickers(ticker)
         # if industry and sector:
         #     top_3_stocks = utils.get_top_3_stocks_by_industry_and_sector(industry, sector)

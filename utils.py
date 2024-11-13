@@ -1225,6 +1225,24 @@ def g_spread_write(ticker, arrays):
     worksheet.update_acell("AG" + str(row), arrays[6]) # 理想（価格）
     worksheet.update_acell("AI" + str(row), arrays[7]) # 理想（%）
 
+def g_spread_write_data(ticker):
+    arrays = read_news_from_csv(os.path.join(f'./csv/', 'research.csv'), 'shift_jis', ticker).split('\n')[1].split(',')
+    worksheet = g_spread_read_worksheet()
+    tickers = worksheet.col_values(3)
+    is_new = False
+    try:
+        row = tickers.index(ticker) + 1  # Pythonのindexは0から始まるため、シートの行に合わせて+1
+    except ValueError:
+        row = len(tickers) + 1  # ブランクの行のインデックスを取得して+1
+        is_new = True
+
+    max_columns = 20
+    for i in range(min(len(arrays), max_columns)):
+        col_letter = chr(ord('C') + i)  # 'D'から右に順に列を計算
+        worksheet.update_acell(f"{col_letter}{row}", arrays[i])
+    if is_new:
+        worksheet.update_acell("A" + str(row), 'α') # 現在
+
 def get_last_line_of_multiline_string(input_string):
     lines = input_string.strip().split('\n')
     # 最後の行に "[" などが含まれていない場合はその1行前を取得
