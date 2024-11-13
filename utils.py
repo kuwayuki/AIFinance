@@ -1224,6 +1224,7 @@ def g_spread_write(ticker, arrays):
     worksheet.update_acell("AF" + str(row), arrays[5]) # 現実（%）
     worksheet.update_acell("AG" + str(row), arrays[6]) # 理想（価格）
     worksheet.update_acell("AI" + str(row), arrays[7]) # 理想（%）
+    worksheet.update_acell("AJ" + str(row), arrays[8]) # 損切価格
 
 def g_spread_write_data(ticker):
     arrays = read_news_from_csv(os.path.join(f'./csv/', 'research.csv'), 'shift_jis', ticker).split('\n')[1].split(',')
