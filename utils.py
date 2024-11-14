@@ -1305,7 +1305,10 @@ def get_last_line_of_multiline_string(input_string):
         if any(char in line for char in "[]"):
             return line
         elif any(char in line for char in "/"):
-            return f"[{line}]"
+            elements = line.split(", ")
+            # 各要素が既に文字列でない場合（つまり、数値など）であればダブルクォーテーションで囲む
+            quoted_elements = [f'"{element.strip()}"' if not element.strip().startswith('"') else element.strip() for element in elements]
+            return f"[{", ".join(quoted_elements)}]"
 
     # 条件に合う行がなければNoneを返す（必要に応じて別のデフォルト値に変更可能）
     return None
@@ -1324,6 +1327,7 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
         else:
             try:
                 print("plaintext")
+                print(array_values)
                 arrays = eval(array_values)
             except:
                 # 不正な文字列の場合は警告を出して無視する
