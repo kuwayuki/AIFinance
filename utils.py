@@ -1250,7 +1250,7 @@ def g_spread_write_data(ticker):
     if is_new:
         worksheet.update_acell("A" + str(row), 'α') # 現在
 
-def g_spread_notice():
+def g_spread_notice(is_line = True, is_buy = False):
     worksheet = g_spread_read_worksheet()
     tickers = worksheet.col_values(3)
     num_rows = len(tickers) + 2
@@ -1272,10 +1272,13 @@ def g_spread_notice():
             len(ac_values[row]) > 0 and
             float(ac_values[row][0]) >= cell_aw
         )
+        buy_num = 1.1
+        if is_buy:
+            buy_num = 1.0
         meet_third_condition = (
             len(m_values[row]) > 0 and
             len(z_values[row]) > 0 and
-            float(m_values[row][0]) <= float(z_values[row][0]) * 1.1
+            float(m_values[row][0]) <= float(z_values[row][0]) * buy_num
         )
 
         if meet_first_condition or meet_third_condition:
@@ -1284,16 +1287,24 @@ def g_spread_notice():
             cell_z = z_values[row][0] if meet_third_condition else 'NaN'
 
             # ★を付ける条件を追加
-            if len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * 1.0:
+            if len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * (buy_num - 0.1):
                 cell_z = f"★{cell_z}"
 
             results.append((cell_c, cell_z, cell_aa))
 
     # 結果を改行区切りの文字列に変換
-    result_text = "\n".join([f"{item[0]}, {item[1]}, {item[2]}" for item in results])
-    send_line_notify(result_text, '直近の売買')
+    if is_line:
+        # result_text = "\n".join([f"{item[0]}, {item[1]}, {item[2]}" for item in results])
+        buy_text = '◇買い\n'
+        sell_text = '◇売り\n'
+        for item in results:
+            if item[1] != 'NaN':
+                buy_text += f"{item[0]}: {item[1]}\n"
+            if item[2] != 'NaN':
+                sell_text += f"{item[0]}: {item[2]}\n"
+        send_line_notify(f"{buy_text}\n{sell_text}")
 
-    return result_text
+    return results
 
 def get_last_line_of_multiline_string(input_string):
     lines = input_string.strip().split('\n')

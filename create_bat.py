@@ -1,8 +1,9 @@
 import utils
 
-response = utils.g_spread_read()
+mark_arrays = utils.g_spread_read()
+
 bat_content = f"""cd /d %~dp0
-python .\main_CAN_SLIM.py "{response}"
+python .\main_CAN_SLIM.py "{mark_arrays}"
 """
 
 with open("aifinance_custom.bat", "w", encoding="utf-8") as bat_file:

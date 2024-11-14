@@ -4,6 +4,7 @@ import re
 import json
 import sys
 import utils
+import time
 import get_news
 import main as MainPy
 import output_csv
@@ -14,6 +15,7 @@ from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['NFLX']
 folder_path = ''
 is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
+WATCH_COUNT = 5
 
 def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = True):
     global folder_path
@@ -27,7 +29,22 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
     get_buy_sell_prices(can_slim_tickers, is_output_all_info, is_send_line, is_write_g_spread)
 
     if is_notice_quick:
-        utils.g_spread_notice()
+        # マークがついているもののみ全て評価
+        mark_arrays = utils.g_spread_notice()
+
+        # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
+        for i in range(WATCH_COUNT):
+            if i < (WATCH_COUNT - 1):
+                print("30分待機中...")
+                time.sleep(30 * 60)  # 30分待機（1800秒）
+            print(f"{i+1}回目の実行")
+
+            # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
+            spread_arrays = utils.g_spread_notice(False)
+            future_arrays = [item[0] for item in spread_arrays if item[0] in mark_arrays]
+
+            output_csv.mains(future_arrays)
+            utils.g_spread_notice(is_buy=True)
 
 # CAN-SLIM法の銘柄から直近のニュースを考慮して銘柄を絞り込む
 def filter_can_slim(tickers):
