@@ -1297,10 +1297,18 @@ def g_spread_notice():
 
 def get_last_line_of_multiline_string(input_string):
     lines = input_string.strip().split('\n')
-    # 最後の行に "[" などが含まれていない場合はその1行前を取得
-    if not any(char in lines[-1] for char in "[]"):
-        return lines[-2] if len(lines) > 1 else lines[-1]
-    return lines[-1]
+    num_lines_to_check = min(3, len(lines))  # 最大3行までチェック、ただし行数が少なければその範囲
+
+    # 最終行から3行を順にチェック
+    for i in range(1, num_lines_to_check + 1):
+        line = lines[-i]
+        if any(char in line for char in "[]"):
+            return line
+        elif any(char in line for char in "/"):
+            return f"[{line}]"
+
+    # 条件に合う行がなければNoneを返す（必要に応じて別のデフォルト値に変更可能）
+    return None
 
 def analyst_eval_send(ticker, is_write_g_spread = False):
     ticker_eval = analyst_eval(ticker, is_write_g_spread)
