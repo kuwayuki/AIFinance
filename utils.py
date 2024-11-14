@@ -1308,7 +1308,8 @@ def get_last_line_of_multiline_string(input_string):
             elements = line.split(", ")
             # 各要素が既に文字列でない場合（つまり、数値など）であればダブルクォーテーションで囲む
             quoted_elements = [f'"{element.strip()}"' if not element.strip().startswith('"') else element.strip() for element in elements]
-            return f"[{", ".join(quoted_elements)}]"
+            join_elements = f'[{(", ".join(quoted_elements))}]'
+            return join_elements
 
     # 条件に合う行がなければNoneを返す（必要に応じて別のデフォルト値に変更可能）
     return None
@@ -1339,7 +1340,7 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
 
 def sample(ticker):
     print(ticker)
-    print(g_spread_notice())
+    print(get_last_line_of_multiline_string("aaaa\naaa\naaa\n8, 7, 8, 71.16, 75.00, 60, 2024/11/28, 85.00, 50, 2025/02/01, 90.00, 40, 2025/05/01, 66.00"))
     # g_spread_write(ticker, ["ABC", "DEF"])
     # print(finnhub_client.fund_ownership(ticker, limit=5))
     # dl = Downloader("./history/", email_address="ee68028@gmail.com")
