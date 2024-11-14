@@ -33,10 +33,11 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
         mark_arrays = utils.g_spread_notice()
 
         # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
+        time_min = 60
         for i in range(WATCH_COUNT):
             if i < (WATCH_COUNT - 1):
-                print("30分待機中...")
-                time.sleep(30 * 60)  # 30分待機（1800秒）
+                print(f"{time_min}分待機中...")
+                time.sleep(time_min * 60) 
             print(f"{i+1}回目の実行")
 
             # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
