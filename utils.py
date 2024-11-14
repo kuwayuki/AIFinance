@@ -1264,23 +1264,36 @@ def g_spread_notice():
     cell_av = float(worksheet.acell("AV3").value)
     cell_aw = float(worksheet.acell("AW3").value)
 
-    results = [
-        (
-            c_values[row][0] if c_values[row] else 'NaN',
-            z_values[row][0] if len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * 1.1 else 'NaN',
-            aa_values[row][0] if len(ab_values[row]) > 0 and len(ac_values[row]) > 0 and float(ab_values[row][0]) >= cell_av and float(ac_values[row][0]) >= cell_aw else 'NaN'
+    results = []
+    for row in range(len(a_values)):
+        meet_first_condition = (
+            len(ab_values[row]) > 0 and
+            float(ab_values[row][0]) >= cell_av and
+            len(ac_values[row]) > 0 and
+            float(ac_values[row][0]) >= cell_aw
         )
-        for row in range(len(a_values))
-        if (len(ab_values[row]) > 0 and float(ab_values[row][0]) >= cell_av and len(ac_values[row]) > 0 and float(ac_values[row][0]) >= cell_aw)
-        or (len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * 1.1)
-    ]
+        meet_third_condition = (
+            len(m_values[row]) > 0 and
+            len(z_values[row]) > 0 and
+            float(m_values[row][0]) <= float(z_values[row][0]) * 1.1
+        )
+
+        if meet_first_condition or meet_third_condition:
+            cell_c = c_values[row][0] if c_values[row] else 'NaN'
+            cell_aa = aa_values[row][0] if meet_first_condition else 'NaN'
+            cell_z = z_values[row][0] if meet_third_condition else 'NaN'
+
+            # ★を付ける条件を追加
+            if len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * 1.0:
+                cell_z = f"★{cell_z}"
+
+            results.append((cell_c, cell_z, cell_aa))
 
     # 結果を改行区切りの文字列に変換
     result_text = "\n".join([f"{item[0]}, {item[1]}, {item[2]}" for item in results])
     send_line_notify(result_text, '直近の売買')
 
     return result_text
-
 
 def get_last_line_of_multiline_string(input_string):
     lines = input_string.strip().split('\n')
