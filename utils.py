@@ -968,7 +968,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
         have_finance_info = f"現在の株の保有数は下記です。全てあるいは部分的に売る必要があるときは教えてください。\n{have_finance}"
     last_arrays = ""
     if is_write_g_spread:
-        last_arrays = "最後の行に各結果を文字列配列のみ、要素も値のみ(上昇率%は不要)で記載して下さい。5~7は3つずつなので14個の配列になります"
+        last_arrays = "最後の行に各結果を文字列配列のみ、要素も値のみ(上昇率%は不要)で記載して下さい。5~7は価格、確率、時期の3つずつなので14個の配列になります"
 
     prompt = PROMPT_USER["ANALYST_EVAL"].format(
         ticker=ticker,
