@@ -968,7 +968,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
         have_finance_info = f"現在の株の保有数は下記です。全てあるいは部分的に売る必要があるときは教えてください。\n{have_finance}"
     last_arrays = ""
     if is_write_g_spread:
-        last_arrays = "最後の行に文字列配列で[現在価格, 推奨する購入価格, スイングトレードの売り価格, 到達する確率, 現実的な売り価格, 到達する確率, 理想的な売り価格, 到達する確率, 損切価格]の値のみを記載して下さい。"
+        last_arrays = "最後の行に各結果を文字列配列のみ、要素も値のみ(上昇率%は不要)で記載して下さい。5~7は3つずつなので14個の配列になります"
 
     prompt = PROMPT_USER["ANALYST_EVAL"].format(
         ticker=ticker,
@@ -1216,15 +1216,21 @@ def g_spread_write(ticker, arrays):
         print(f"Ticker '{ticker}' not found in column C.")
         return
 
-    worksheet.update_acell("M" + str(row), arrays[0]) # 現在
-    worksheet.update_acell("Z" + str(row), arrays[1]) # 買い価格
-    worksheet.update_acell("AA" + str(row), arrays[2]) # スイングトレード（価格）
-    worksheet.update_acell("AC" + str(row), arrays[3]) # スイングトレード（%）
-    worksheet.update_acell("AD" + str(row), arrays[4]) # 現実（価格）
-    worksheet.update_acell("AF" + str(row), arrays[5]) # 現実（%）
-    worksheet.update_acell("AG" + str(row), arrays[6]) # 理想（価格）
-    worksheet.update_acell("AI" + str(row), arrays[7]) # 理想（%）
-    worksheet.update_acell("AJ" + str(row), arrays[8]) # 損切価格
+    worksheet.update_acell("AN" + str(row), arrays[0]) # 買い価格
+    worksheet.update_acell("AO" + str(row), arrays[1]) # 買い価格
+    worksheet.update_acell("AP" + str(row), arrays[2]) # 買い価格
+
+    worksheet.update_acell("Z" + str(row), arrays[3]) # 買い価格
+    worksheet.update_acell("AA" + str(row), arrays[4]) # スイングトレード（価格）
+    worksheet.update_acell("AC" + str(row), arrays[5]) # スイングトレード（%）
+    worksheet.update_acell("AD" + str(row), arrays[6]) # スイングトレード（時期）
+    worksheet.update_acell("AE" + str(row), arrays[7]) # 現実（価格）
+    worksheet.update_acell("AG" + str(row), arrays[8]) # 現実（%）
+    worksheet.update_acell("AH" + str(row), arrays[9]) # 現実（時期）
+    worksheet.update_acell("AI" + str(row), arrays[10]) # 理想（価格）
+    worksheet.update_acell("AK" + str(row), arrays[11]) # 理想（%）
+    worksheet.update_acell("AL" + str(row), arrays[12]) # 理想（時期）
+    worksheet.update_acell("AM" + str(row), arrays[13]) # 損切価格
 
 def g_spread_write_data(ticker):
     arrays = read_news_from_csv(os.path.join(f'./csv/', 'research.csv'), 'shift_jis', ticker).split('\n')[1].split(',')
