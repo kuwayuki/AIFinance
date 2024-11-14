@@ -1250,6 +1250,38 @@ def g_spread_write_data(ticker):
     if is_new:
         worksheet.update_acell("A" + str(row), 'α') # 現在
 
+def g_spread_notice():
+    worksheet = g_spread_read_worksheet()
+    tickers = worksheet.col_values(3)
+    num_rows = len(tickers) + 2
+
+    # 一括で値を取得する
+    ranges = [f"{col}3:{col}{num_rows}" for col in ["A", "AB", "AC", "C", "AA", "M", "Z"]]
+    values = worksheet.batch_get(ranges)
+
+    a_values, ab_values, ac_values, c_values, aa_values, m_values, z_values = (v + [[]] * (num_rows - 2 - len(v)) for v in values)
+
+    cell_av = float(worksheet.acell("AV3").value)
+    cell_aw = float(worksheet.acell("AW3").value)
+
+    results = [
+        (
+            c_values[row][0] if c_values[row] else 'NaN',
+            z_values[row][0] if len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * 1.1 else 'NaN',
+            aa_values[row][0] if len(ab_values[row]) > 0 and len(ac_values[row]) > 0 and float(ab_values[row][0]) >= cell_av and float(ac_values[row][0]) >= cell_aw else 'NaN'
+        )
+        for row in range(len(a_values))
+        if (len(ab_values[row]) > 0 and float(ab_values[row][0]) >= cell_av and len(ac_values[row]) > 0 and float(ac_values[row][0]) >= cell_aw)
+        or (len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * 1.1)
+    ]
+
+    # 結果を改行区切りの文字列に変換
+    result_text = "\n".join([f"{item[0]}, {item[1]}, {item[2]}" for item in results])
+    send_line_notify(result_text, '直近の売買')
+
+    return result_text
+
+
 def get_last_line_of_multiline_string(input_string):
     lines = input_string.strip().split('\n')
     # 最後の行に "[" などが含まれていない場合はその1行前を取得
@@ -1282,7 +1314,7 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
 
 def sample(ticker):
     print(ticker)
-    analyst_eval_send(ticker, True)
+    print(g_spread_notice())
     # g_spread_write(ticker, ["ABC", "DEF"])
     # print(finnhub_client.fund_ownership(ticker, limit=5))
     # dl = Downloader("./history/", email_address="ee68028@gmail.com")
