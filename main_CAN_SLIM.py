@@ -42,7 +42,6 @@ def filter_can_slim(tickers):
 
 def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = False):
     for ticker in tickers:
-        utils.g_spread_write_data(ticker)
         # industry, sector = utils.get_industry_tickers(ticker)
         # if industry and sector:
         #     top_3_stocks = utils.get_top_3_stocks_by_industry_and_sector(industry, sector)
@@ -50,6 +49,7 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
         #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
         # utils.get_buy_sell_price(ticker)
         try:
+            utils.g_spread_write_data(ticker)
             if is_output_all_info:
                 utils.set_output_log_file_path(ticker, 'all_info', True)
                 utils.all_print(ticker)
@@ -70,6 +70,8 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
             else:
                 utils.output_log(f"評価が低いので確認しません。")
             # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
+        except:
+            print('error')
 
         finally:
             utils.output_log(f"\n★★★{ticker} End★★★")
