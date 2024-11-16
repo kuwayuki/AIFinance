@@ -949,7 +949,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
             if news_date > recent_weeks:
                 news = f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}"
                 news_list.append(news)
-        news_summary = f"最近のニュースは下記です。良いニュースと悪いニュースが「価格」に影響することも反映してください。\n"
+        news_summary = f"最近のニュースは下記です。良いニュースと悪いニュースは4~7の「価格」に影響します。\n"
         news_summary += get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"])
 
     # 各情報を文字列に変換して結合
