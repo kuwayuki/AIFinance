@@ -35,9 +35,6 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
         # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
         for i in range(WATCH_COUNT):
-            if i < (WATCH_COUNT - 1):
-                print(f"{TIME_MINUTE}分待機中...")
-                time.sleep(TIME_MINUTE * 60) 
             print(f"{i+1}回目の実行")
 
             # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
@@ -46,6 +43,10 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
             output_csv.mains(future_arrays)
             utils.g_spread_notice(is_buy=True)
+
+            if i < (WATCH_COUNT - 1):
+                print(f"{TIME_MINUTE}分待機中...")
+                time.sleep(TIME_MINUTE * 60) 
 
 # CAN-SLIM法の銘柄から直近のニュースを考慮して銘柄を絞り込む
 def filter_can_slim(tickers):

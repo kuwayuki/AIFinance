@@ -1285,12 +1285,13 @@ def g_spread_notice(is_line = True, is_buy = False):
             cell_c = c_values[row][0] if c_values[row] else 'NaN'
             cell_aa = aa_values[row][0] if meet_first_condition else 'NaN'
             cell_z = z_values[row][0] if meet_third_condition else 'NaN'
+            cell_m = m_values[row][0]
 
             # ★を付ける条件を追加
             if len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * (buy_num - 0.1):
                 cell_z = f"★{cell_z}"
 
-            results.append((cell_c, cell_z, cell_aa))
+            results.append((cell_c, cell_z, cell_aa, cell_m))
 
     # 結果を改行区切りの文字列に変換
     if is_line:
@@ -1299,7 +1300,7 @@ def g_spread_notice(is_line = True, is_buy = False):
         sell_text = '◇売り\n'
         for item in results:
             if item[1] != 'NaN':
-                buy_text += f"{item[0]}: {item[1]}\n"
+                buy_text += f"{item[0]}: {item[3]}({item[1]})\n"
             if item[2] != 'NaN':
                 sell_text += f"{item[0]}: {item[2]}\n"
         send_line_notify(f"{buy_text}\n{sell_text}")
