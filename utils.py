@@ -1307,6 +1307,31 @@ def g_spread_notice(is_line = True, is_buy = False):
 
     return results
 
+def move_bkup_folder(day_before = 3):
+    # 移動対象のフォルダと移動先のフォルダのパス
+    history_folder = "history"
+    bkup_folder = os.path.join(history_folder, "bkup")
+    cutoff_date = datetime.now() - timedelta(days=day_before)
+
+    # フォルダをスキャンして、日付のフォーマットに一致するフォルダを探す
+    for folder_name in os.listdir(history_folder):
+        folder_path = os.path.join(history_folder, folder_name)
+        if os.path.isdir(folder_path):
+            try:
+                # フォルダ名が日付形式（例: 20241105）の場合、日付に変換してチェック
+                folder_date = datetime.strptime(folder_name, "%Y%m%d")
+                if folder_date < cutoff_date:
+                    # 移動先のディレクトリが存在しなければ作成する
+                    if not os.path.exists(bkup_folder):
+                        os.makedirs(bkup_folder)
+                    # フォルダを移動 (os.rename を使用)
+                    new_path = os.path.join(bkup_folder, folder_name)
+                    os.rename(folder_path, new_path)
+                    print(f"{folder_name} を {bkup_folder} に移動しました。")
+            except ValueError:
+                # フォルダ名が日付形式でない場合は無視
+                pass
+
 def get_last_line_of_multiline_string(input_string):
     lines = input_string.strip().split('\n')
     num_lines_to_check = min(3, len(lines))  # 最大3行までチェック、ただし行数が少なければその範囲

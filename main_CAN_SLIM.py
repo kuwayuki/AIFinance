@@ -20,6 +20,7 @@ TIME_MINUTE = 120
 
 def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = True):
     global folder_path
+    utils.move_bkup_folder()
 
     # 1. CAN-SLIM法で選定された銘柄を配列指定
     # can_slim_tickers = filter_can_slim(tickers)
