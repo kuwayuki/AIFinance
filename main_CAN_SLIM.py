@@ -17,9 +17,11 @@ folder_path = ''
 is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
 WATCH_COUNT = 3
 TIME_MINUTE = 120
+TIME_MINUTE_INIT = 1
 
 def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = True):
     global folder_path
+
     utils.move_bkup_folder()
 
     # 1. CAN-SLIM法で選定された銘柄を配列指定
@@ -36,6 +38,11 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
         for i in range(WATCH_COUNT):
             print(f"{i+1}回目の実行")
+
+            if i == 0:
+                print(f"{TIME_MINUTE_INIT}分待機中...")
+                time.sleep(TIME_MINUTE_INIT * 60) 
+
             # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
             spread_arrays = utils.g_spread_notice(False)
             future_arrays = [item[0] for item in spread_arrays if item[0] in mark_arrays]

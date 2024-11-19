@@ -1,5 +1,8 @@
 import yfinance as yf
 import gspread
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 import pandas as pd
 import openai
 import matplotlib.pyplot as plt
@@ -1191,13 +1194,44 @@ def send_line_log_text(is_include_https = True):
 def g_spread_read_worksheet():
     SHEET_KEY = "1bVZTZOR4WO4pttcjwypudEIsv7OZViQif0kZn0wu7SE"
     SHEET_NAME = "AI SEED"
-    gc = gspread.oauth(
-                    credentials_filename="./config/client_secret_836067786046-8iomn415540st6jpmj2f3plko7kuh63l.apps.googleusercontent.com.json", # 認証用のJSONファイル
-                    authorized_user_filename="./config/authorized_user.json"
-                    )
+    AUTHORIZED_USER_FILE = "./config/authorized_user.json"
+    CREDENTIALS_FILE = "./config/client_secret.json"
+    
+    credentials = None
+
+    # 認証情報をロードまたは作成
+    if os.path.exists(AUTHORIZED_USER_FILE):
+        # 保存済みの認証情報をロード
+        credentials = Credentials.from_authorized_user_file(AUTHORIZED_USER_FILE)
+        if credentials.expired:
+            try:
+                # リフレッシュトークンでアクセストークンを更新
+                credentials.refresh(Request())
+            except Exception as e:
+                print("Error refreshing credentials. Starting authentication flow...")
+                credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
+    else:
+        # 初回認証フローを実行
+        credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
+
+    # Google Sheets API に接続
+    gc = gspread.authorize(credentials)
     sh = gc.open_by_key(SHEET_KEY)
     worksheet = sh.worksheet(SHEET_NAME)
     return worksheet
+
+def perform_auth_flow(credentials_file, authorized_user_file):
+    # 初回認証フローを実行
+    flow = InstalledAppFlow.from_client_secrets_file(
+        credentials_file,
+        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
+    credentials = flow.run_local_server(port=0)
+
+    # トークンを保存
+    with open(authorized_user_file, 'w') as f:
+        f.write(credentials.to_json())
+    return credentials
 
 def g_spread_read():
     worksheet = g_spread_read_worksheet()
