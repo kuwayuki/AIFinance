@@ -20,6 +20,7 @@ from scipy.stats import linregress
 from scipy.signal import argrelextrema
 import numpy as np
 from yahooquery import Ticker
+from alpha_vantage.timeseries import TimeSeries # pip install alpha-vantage
 # import finnhub
 # from sec_edgar_downloader import Downloader
  # pip install scipy
@@ -57,6 +58,7 @@ IS_DETAIL = config.get("IS_DETAIL", True)
 NEWS_API = config.get("NEWS_API", "")
 GPT_MODEL = config.get("GPT_MODEL", "gpt-4o")
 NEWS_COUNT = config.get("NEWS_COUNT", 40)
+ALPHA_API_KEY = config.get("ALPHA_API_KEY", "")
 
 # IS_ALLの設定
 IS_ALL = sys.argv[3].lower() == 'true' if len(sys.argv) > 3 else False  # "true"の場合True、それ以外はFalse
@@ -1232,6 +1234,14 @@ def g_spread_write(ticker, arrays):
     worksheet.update_acell("AL" + str(row), arrays[12]) # 理想（時期）
     worksheet.update_acell("AM" + str(row), arrays[13]) # 損切価格
 
+
+def g_spread_write_data_multi(tickers):
+    for ticker in tickers:
+        try:
+            g_spread_write_data(ticker)
+        except ValueError:
+            pass
+
 def g_spread_write_data(ticker):
     arrays = read_news_from_csv(os.path.join(f'./csv/', 'research.csv'), 'shift_jis', ticker).split('\n')[1].split(',')
     worksheet = g_spread_read_worksheet()
@@ -1375,9 +1385,54 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
         except Exception as e:
             print(e)
 
+def get_current_price_multi(tickers, is_write_csv = True):
+    for ticker in tickers:
+        try:
+            get_current_price(ticker, is_write_csv)
+        except ValueError:
+            pass
+
+def get_current_price(ticker, is_write_csv = True):
+    file_path = os.path.join(f'./csv/', 'research.csv')
+
+    # リアルタイム株価データを取得
+    ts = TimeSeries(key=ALPHA_API_KEY, output_format='pandas')
+    data, meta_data = ts.get_quote_endpoint(symbol=ticker)
+
+    # 現在の価格を表示
+    current_price = float(data['05. price'].iloc[0])
+
+    # データ保存
+    data.to_csv(f"{ticker}_realtime.csv")
+    if is_write_csv:
+        if os.path.exists(file_path):
+            # 既存のCSVを読み込む
+            existing_df = pd.read_csv(file_path, encoding='shift_jis', on_bad_lines='skip')
+            
+            # 「Ticker」をインデックスに設定
+            existing_df.set_index('Ticker', inplace=True)
+            
+            if ticker in existing_df.index:
+                # Tickerが存在する場合、現在の株価を更新
+                existing_df.at[ticker, '現在の株価'] = current_price
+            else:
+                # Tickerが存在しない場合、新しい行を追加
+                new_row = pd.DataFrame({
+                    'Ticker': [ticker],
+                    '現在の株価': [current_price]
+                }).set_index('Ticker')
+                existing_df = pd.concat([existing_df, new_row])
+
+            # CSVを保存
+            existing_df.reset_index().to_csv(file_path, index=False, encoding='shift_jis', errors='replace')
+            print(f"Updated CSV: {file_path}")
+        else:
+            print(f"File {file_path} does not exist. Please create it first.")
+
 def sample(ticker):
-    print(ticker)
-    print(get_last_line_of_multiline_string("aaaa\naaa\naaa\n8, 7, 8, 71.16, 75.00, 60, 2024/11/28, 85.00, 50, 2025/02/01, 90.00, 40, 2025/05/01, 66.00"))
+    get_current_price(ticker)
+
+    # print(get_last_line_of_multiline_string("aaaa\naaa\naaa\n8, 7, 8, 71.16, 75.00, 60, 2024/11/28, 85.00, 50, 2025/02/01, 90.00, 40, 2025/05/01, 66.00"))
     # g_spread_write(ticker, ["ABC", "DEF"])
     # print(finnhub_client.fund_ownership(ticker, limit=5))
     # dl = Downloader("./history/", email_address="ee68028@gmail.com")

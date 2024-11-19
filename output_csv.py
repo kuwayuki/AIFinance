@@ -437,7 +437,8 @@ def save_etf_data(ticker, file_path, include_canslim_data=False, include_investm
     trailing_per = format_decimal(etf.info.get("trailingPE", "N/A"))  # 実績PER
     roe = format_percentage(etf.info.get("returnOnEquity", "N/A"))  # ROE
     website = etf.info.get("website", "N/A")  # 企業URL
-        # 現在の株価を取得
+
+    # 現在の株価を取得
     try:
         history = etf.history(period="1d")
         if not history.empty and 'Close' in history.columns:

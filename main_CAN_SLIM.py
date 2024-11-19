@@ -34,15 +34,16 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
         # マークがついているもののみ全て評価
         mark_arrays = utils.g_spread_notice()
 
-        # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
         for i in range(WATCH_COUNT):
             print(f"{i+1}回目の実行")
-
             # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
             spread_arrays = utils.g_spread_notice(False)
             future_arrays = [item[0] for item in spread_arrays if item[0] in mark_arrays]
 
-            output_csv.mains(future_arrays)
+            # ローカルの現在価格のみ更新
+            utils.get_current_price_multi(future_arrays)
+            # スプレッドシートデータ更新
+            utils.g_spread_write_data_multi(future_arrays)
             utils.g_spread_notice(is_buy=True)
 
             if i < (WATCH_COUNT - 1):
