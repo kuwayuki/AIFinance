@@ -1,4 +1,5 @@
 import yfinance as yf
+# https://docs.gspread.org/en/v5.4.0/user-guide.html
 import gspread
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -1268,6 +1269,33 @@ def g_spread_write(ticker, arrays):
     worksheet.update_acell("AL" + str(row), arrays[12]) # 理想（時期）
     worksheet.update_acell("AM" + str(row), arrays[13]) # 損切価格
 
+# AA-ACのデータを取得してBA以降にコピー
+def g_spread_copy_columns():
+    current_date = datetime.now().strftime("%Y%m%d")
+    worksheet = g_spread_read_worksheet()
+
+    ba1_value = worksheet.acell("BA1").value
+    if ba1_value == current_date:
+        print("BA1に同じ日付が既に存在するため、処理をスキップします。")
+        return
+
+    # BA-BDの列を4列分插入
+    worksheet.insert_cols([[], [], [], []], col=53, value_input_option="USER_ENTERED")
+    print("BA-BDの列を插入しました。")
+
+    # AA-ACのデータをBA-BCにコピーする
+    source_range = "AA2:AD"
+    destination_range = "BA2:BD"
+    worksheet.copy_range(source=source_range, dest=destination_range)
+    print("AA-ACのデータをBA-BCにコピーしました。")
+
+    # BA1-BC1のセルを結合
+    worksheet.merge_cells("BA1:BD1")
+    print("BA1-BC1のセルを結合しました。")
+
+    # BA1に日付を記入
+    worksheet.update_acell("BA1", current_date)
+    print(f"BA1に日付 {current_date} を記入しました。")
 
 def g_spread_write_data_multi(tickers):
     for ticker in tickers:
@@ -1464,7 +1492,7 @@ def get_current_price(ticker, is_write_csv = True):
             print(f"File {file_path} does not exist. Please create it first.")
 
 def sample(ticker):
-    get_current_price(ticker)
+    g_spread_copy_columns()
 
     # print(get_last_line_of_multiline_string("aaaa\naaa\naaa\n8, 7, 8, 71.16, 75.00, 60, 2024/11/28, 85.00, 50, 2025/02/01, 90.00, 40, 2025/05/01, 66.00"))
     # g_spread_write(ticker, ["ABC", "DEF"])

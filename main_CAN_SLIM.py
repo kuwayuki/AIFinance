@@ -32,6 +32,8 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
     # 2. 各手法で売買価格を判断
     get_buy_sell_prices(can_slim_tickers, is_output_all_info, is_send_line, is_write_g_spread)
 
+    utils.g_spread_copy_columns()
+
     if is_notice_quick:
         # マークがついているもののみ全て評価
         mark_arrays = utils.g_spread_notice()
