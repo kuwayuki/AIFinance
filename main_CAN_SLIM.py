@@ -16,7 +16,7 @@ tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(s
 folder_path = ''
 is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
 WATCH_COUNT = 3
-TIME_MINUTE = 120
+TIME_MINUTE = 1
 TIME_MINUTE_INIT = 30
 
 def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = True):
@@ -36,7 +36,7 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
     if is_notice_quick:
         # CSVデータをスプレッドシートにコピー
-        utils.g_spread_write_data(tickers)
+        utils.g_spread_write_data_multi(tickers)
         # マークがついているもののみ全て評価
         mark_arrays = utils.g_spread_notice()
 

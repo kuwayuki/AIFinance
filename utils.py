@@ -1393,11 +1393,16 @@ def g_spread_notice(is_line = True, is_buy = False):
 
     for row in range(len(a_values)):
         meet_sell_condition = (
-            len(ab_values[row]) > 0 and
-            float(ab_values[row][0]) >= cell_av and
-            len(ac_values[row]) > 0 and
-            float(ac_values[row][0]) >= cell_aw and
-            float(m_values[row][0]) <= float(aa_values[row][0]) * buy_num
+            (
+                len(ab_values[row]) > 0 and
+                float(ab_values[row][0]) >= cell_av and
+                len(ac_values[row]) > 0 and
+                float(ac_values[row][0]) >= cell_aw
+            ) and
+            (
+                len(m_values[row]) > 0 and len(aa_values[row]) > 0 and
+                float(aa_values[row][0]) <= float(m_values[row][0]) * buy_num
+            )
         )
         meet_buy_condition = (
             len(m_values[row]) > 0 and
@@ -1427,9 +1432,9 @@ def g_spread_notice(is_line = True, is_buy = False):
         buy_text = '◇買い\n'
         sell_text = '◇売り\n'
         for item in results:
-            if item[1] != 'NaN':
+            if item[2] != 'NaN' and item[2] != '★NaN':
                 buy_text += f"{item[0]}: {item[2]}({item[1]})\n"
-            if item[2] != 'NaN':
+            if item[3] != 'NaN' and item[3] != '★NaN':
                 sell_text += f"{item[0]}: {item[3]}({item[1]})\n"
         send_line_notify(f"{buy_text}\n{sell_text}")
 
