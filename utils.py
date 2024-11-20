@@ -1386,33 +1386,39 @@ def g_spread_notice(is_line = True, is_buy = False):
     cell_aw = float(worksheet.acell("AW3").value)
 
     results = []
+    buy_num = 1.1
+    if is_buy:
+        buy_num = 1.0
+
     for row in range(len(a_values)):
-        meet_first_condition = (
+        meet_sell_condition = (
             len(ab_values[row]) > 0 and
             float(ab_values[row][0]) >= cell_av and
             len(ac_values[row]) > 0 and
-            float(ac_values[row][0]) >= cell_aw
+            float(ac_values[row][0]) >= cell_aw and
+            float(m_values[row][0]) <= float(aa_values[row][0]) * buy_num
         )
-        buy_num = 1.1
-        if is_buy:
-            buy_num = 1.0
-        meet_third_condition = (
+        meet_buy_condition = (
             len(m_values[row]) > 0 and
             len(z_values[row]) > 0 and
             float(m_values[row][0]) <= float(z_values[row][0]) * buy_num
         )
 
-        if meet_first_condition or meet_third_condition:
+        if meet_sell_condition or meet_buy_condition:
             cell_c = c_values[row][0] if c_values[row] else 'NaN'
-            cell_aa = aa_values[row][0] if meet_first_condition else 'NaN'
-            cell_z = z_values[row][0] if meet_third_condition else 'NaN'
+            cell_aa = aa_values[row][0] if meet_sell_condition else 'NaN'
+            cell_z = z_values[row][0] if meet_buy_condition else 'NaN'
             cell_m = m_values[row][0]
 
-            # ★を付ける条件を追加
+            # ★を付ける条件を追加(売り価格)
+            if len(m_values[row]) > 0 and len(aa_values[row]) > 0 and float(aa_values[row][0]) <= float(m_values[row][0]) * (buy_num - 0.1):
+                cell_aa = f"★{cell_aa}"
+
+            # ★を付ける条件を追加(買い価格)
             if len(m_values[row]) > 0 and len(z_values[row]) > 0 and float(m_values[row][0]) <= float(z_values[row][0]) * (buy_num - 0.1):
                 cell_z = f"★{cell_z}"
 
-            results.append((cell_c, cell_z, cell_aa, cell_m))
+            results.append((cell_c, cell_m, cell_z, cell_aa))
 
     # 結果を改行区切りの文字列に変換
     if is_line:
@@ -1421,9 +1427,9 @@ def g_spread_notice(is_line = True, is_buy = False):
         sell_text = '◇売り\n'
         for item in results:
             if item[1] != 'NaN':
-                buy_text += f"{item[0]}: {item[3]}({item[1]})\n"
+                buy_text += f"{item[0]}: {item[2]}({item[1]})\n"
             if item[2] != 'NaN':
-                sell_text += f"{item[0]}: {item[2]}\n"
+                sell_text += f"{item[0]}: {item[3]}({item[1]})\n"
         send_line_notify(f"{buy_text}\n{sell_text}")
 
     return results

@@ -53,6 +53,7 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
             utils.get_current_price_multi(future_arrays)
             # スプレッドシートデータ更新
             utils.g_spread_write_data_multi(future_arrays)
+            # 倍率の厳密チェック
             utils.g_spread_notice(is_buy=True)
 
             if i < (WATCH_COUNT - 1):
