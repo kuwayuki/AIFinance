@@ -34,6 +34,7 @@ from alpha_vantage.timeseries import TimeSeries # pip install alpha-vantage
 
 # finnhub_client = finnhub.Client(api_key="csguqkpr01qldu0cveb0csguqkpr01qldu0cvebg")
 
+TIME_SPREAD = 3
 log_file_path = ''
 def load_config(config_path = "./config/config.json"):
     with open(config_path, "r") as config_file:
@@ -1276,12 +1277,11 @@ def g_spread_copy_columns():
 
     ba1_value = worksheet.acell("BA1").value
     if ba1_value == current_date:
-        print("BA1に同じ日付が既に存在するため、処理をスキップします。")
-        return
-
-    # BA-BDの列を4列分插入
-    worksheet.insert_cols([[], [], [], []], col=53, value_input_option="USER_ENTERED")
-    print("BA-BDの列を插入しました。")
+        print("BA1に同じ日付が既に存在するため、処理を上書きします。")
+    else:
+        # BA-BDの列を4列分插入
+        worksheet.insert_cols([[], [], [], []], col=53, value_input_option="USER_ENTERED")
+        print("BA-BDの列を插入しました。")
 
     # AA-ACのデータをBA-BCにコピーする
     source_range = "AA2:AD"
@@ -1297,12 +1297,61 @@ def g_spread_copy_columns():
     worksheet.update_acell("BA1", current_date)
     print(f"BA1に日付 {current_date} を記入しました。")
 
-def g_spread_write_data_multi(tickers):
+def g_spread_write_data_multi(tickers, is_M_SKIP = True):
+    # 複数のティッカーを一括でスプレッドシートに書き込む
+    worksheet = g_spread_read_worksheet()
+    tickers_in_sheet = worksheet.col_values(3)
+    rows_to_update = []
+    new_rows = []
+
     for ticker in tickers:
         try:
-            g_spread_write_data(ticker)
+            arrays = read_news_from_csv(os.path.join(f'./csv/', 'research.csv'), 'shift_jis', ticker).split('\n')[1].split(',')
+            try:
+                row = tickers_in_sheet.index(ticker) + 1  # Pythonのindexは0から始まるため、シートの行に合わせて+1
+                rows_to_update.append((row, arrays))
+            except ValueError:
+                row = len(tickers_in_sheet) + len(new_rows) + 1  # 新しい行のインデックス
+                new_rows.append((row, ticker, arrays))
         except ValueError:
             pass
+
+    # バッチリクエストで既存のティッカーの更新と新しいティッカーの追加
+    max_columns = 20
+    batch_updates = []
+
+    for row, arrays in rows_to_update:
+        for i in range(min(len(arrays), max_columns)):
+            col_letter = chr(ord('C') + i)  # 'D'から右に順に列を計算
+            if is_M_SKIP and col_letter == 'M':  # M列は更新しない
+                continue
+            batch_updates.append({
+                'range': f"{col_letter}{row}",
+                'values': [[arrays[i]]]
+            })
+
+    for row, ticker, arrays in new_rows:
+        batch_updates.append({
+            'range': "A" + str(row),
+            'values': [['α']]
+        })  # 新規ティッカーのフラグ
+        batch_updates.append({
+            'range': "C" + str(row),
+            'values': [[ticker]]
+        })
+        for i in range(min(len(arrays), max_columns)):
+            col_letter = chr(ord('D') + i)  # 'D'から右に順に列を計算
+            if is_M_SKIP and col_letter == 'M':  # M列は更新しない
+                continue
+            batch_updates.append({
+                'range': f"{col_letter}{row}",
+                'values': [[arrays[i]]]
+            })
+
+    # バッチリクエストを一度に送信
+    if batch_updates:
+        worksheet.batch_update(batch_updates, value_input_option='USER_ENTERED')
+    print("ティッカー情報を一括で更新しました。")
 
 def g_spread_write_data(ticker):
     arrays = read_news_from_csv(os.path.join(f'./csv/', 'research.csv'), 'shift_jis', ticker).split('\n')[1].split(',')
@@ -1451,7 +1500,8 @@ def get_current_price_multi(tickers, is_write_csv = True):
     for ticker in tickers:
         try:
             get_current_price(ticker, is_write_csv)
-        except ValueError:
+        except ValueError as e:
+            print(e)
             pass
 
 def get_current_price(ticker, is_write_csv = True):
@@ -1464,8 +1514,6 @@ def get_current_price(ticker, is_write_csv = True):
     # 現在の価格を表示
     current_price = float(data['05. price'].iloc[0])
 
-    # データ保存
-    data.to_csv(f"{ticker}_realtime.csv")
     if is_write_csv:
         if os.path.exists(file_path):
             # 既存のCSVを読み込む
@@ -1491,9 +1539,9 @@ def get_current_price(ticker, is_write_csv = True):
         else:
             print(f"File {file_path} does not exist. Please create it first.")
 
-def sample(ticker):
-    g_spread_copy_columns()
-
+def sample(tickers):
+    get_current_price_multi(tickers)
+    g_spread_write_data_multi(tickers)
     # print(get_last_line_of_multiline_string("aaaa\naaa\naaa\n8, 7, 8, 71.16, 75.00, 60, 2024/11/28, 85.00, 50, 2025/02/01, 90.00, 40, 2025/05/01, 66.00"))
     # g_spread_write(ticker, ["ABC", "DEF"])
     # print(finnhub_client.fund_ownership(ticker, limit=5))
