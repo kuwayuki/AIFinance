@@ -13,16 +13,19 @@ from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
 # 複数ティッカーをカンマ区切りで受け取り、空白を削除し大文字に変換
 tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['NFLX']
+tickers = utils.ensure_t_suffix(tickers)
+
 folder_path = ''
 is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
 WATCH_COUNT = 3
-TIME_MINUTE = 1
+TIME_MINUTE = 120
 TIME_MINUTE_INIT = 30
 
 def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = True):
     global folder_path
 
     utils.move_bkup_folder()
+    utils.set_Sheet_name(tickers)
 
     # 1. CAN-SLIM法で選定された銘柄を配列指定
     # can_slim_tickers = filter_can_slim(tickers)
@@ -36,7 +39,8 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
     if is_notice_quick:
         # CSVデータをスプレッドシートにコピー
-        utils.g_spread_write_data_multi(tickers)
+        # utils.g_spread_write_data_multi(tickers)
+
         # マークがついているもののみ全て評価
         mark_arrays = utils.g_spread_notice()
 
@@ -85,6 +89,9 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
         #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
         # utils.get_buy_sell_price(ticker)
         try:
+            # CSVデータをスプレッドシートに更新
+            utils.g_spread_write_data(ticker)
+
             if is_output_all_info:
                 utils.set_output_log_file_path(ticker, 'all_info', True)
                 utils.all_print(ticker)

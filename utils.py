@@ -37,6 +37,8 @@ from alpha_vantage.timeseries import TimeSeries # pip install alpha-vantage
 TIME_SPREAD = 3
 current_price_no_error = True
 log_file_path = ''
+SHEET_NAME = "AI SEED"
+
 def load_config(config_path = "./config/config.json"):
     with open(config_path, "r") as config_file:
         config = json.load(config_file)
@@ -1195,8 +1197,8 @@ def send_line_log_text(is_include_https = True):
             send_line_notify(text)
 
 def g_spread_read_worksheet():
+    global SHEET_NAME
     SHEET_KEY = "1bVZTZOR4WO4pttcjwypudEIsv7OZViQif0kZn0wu7SE"
-    SHEET_NAME = "AI SEED"
     AUTHORIZED_USER_FILE = "./config/authorized_user.json"
     CREDENTIALS_FILE = "./config/client_secret.json"
     
@@ -1507,6 +1509,20 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
             g_spread_write(ticker, arrays)
         except Exception as e:
             print(e)
+
+def set_Sheet_name(tickers):
+    global SHEET_NAME
+    if all(ticker.endswith('.T') for ticker in tickers):
+        SHEET_NAME = "AI SEED JAPAN"
+
+def ensure_t_suffix(tickers):
+    result = []
+    for ticker in tickers:
+        if ticker.isdigit():  # 数字のみの場合
+            result.append(f"{ticker}.T")
+        elif ticker.endswith('.T') or not ticker.isdigit():  # 既に .T 付き、または英字ティッカー
+            result.append(ticker)
+    return result
 
 def get_current_price_multi(tickers):
     for ticker in tickers:
