@@ -7,7 +7,7 @@ import pandas as pd
 import json
 
 # デフォルトのティッカーシンボルのリスト
-DEFAULT = ["AAPL"]
+DEFAULT = ["9697.T"]
 
 tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else DEFAULT
 

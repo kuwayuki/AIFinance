@@ -35,6 +35,8 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
     utils.g_spread_copy_columns()
 
     if is_notice_quick:
+        # CSVデータをスプレッドシートにコピー
+        utils.g_spread_write_data(tickers)
         # マークがついているもののみ全て評価
         mark_arrays = utils.g_spread_notice()
 
@@ -49,7 +51,7 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
             spread_arrays = utils.g_spread_notice(False)
             future_arrays = [item[0] for item in spread_arrays if item[0] in mark_arrays]
 
-            # ローカルの現在価格のみ更新
+            # CSVの現在価格のみ更新
             utils.get_current_price_multi(future_arrays)
             # スプレッドシートデータ更新
             utils.g_spread_write_data_multi(future_arrays)
@@ -83,7 +85,6 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
         #     print(f"業界 '{industry}', セクター '{sector}' のトップ3銘柄: {top_3_stocks}")
         # utils.get_buy_sell_price(ticker)
         try:
-            utils.g_spread_write_data(ticker)
             if is_output_all_info:
                 utils.set_output_log_file_path(ticker, 'all_info', True)
                 utils.all_print(ticker)

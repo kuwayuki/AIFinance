@@ -35,6 +35,7 @@ from alpha_vantage.timeseries import TimeSeries # pip install alpha-vantage
 # finnhub_client = finnhub.Client(api_key="csguqkpr01qldu0cveb0csguqkpr01qldu0cvebg")
 
 TIME_SPREAD = 3
+current_price_no_error = True
 log_file_path = ''
 def load_config(config_path = "./config/config.json"):
     with open(config_path, "r") as config_file:
@@ -1297,7 +1298,7 @@ def g_spread_copy_columns():
     worksheet.update_acell("BA1", current_date)
     print(f"BA1に日付 {current_date} を記入しました。")
 
-def g_spread_write_data_multi(tickers, is_M_SKIP = True):
+def g_spread_write_data_multi(tickers, is_M_SKIP = False):
     # 複数のティッカーを一括でスプレッドシートに書き込む
     worksheet = g_spread_read_worksheet()
     tickers_in_sheet = worksheet.col_values(3)
@@ -1502,48 +1503,66 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
         except Exception as e:
             print(e)
 
-def get_current_price_multi(tickers, is_write_csv = True):
+def get_current_price_multi(tickers):
     for ticker in tickers:
         try:
-            get_current_price(ticker, is_write_csv)
+            get_current_price(ticker)
         except ValueError as e:
             print(e)
-            pass
+            return False
+    return True
 
-def get_current_price(ticker, is_write_csv = True):
+def get_current_price(ticker, is_Alpha_Vantage = True):
+    global current_price_no_error
     file_path = os.path.join(f'./csv/', 'research.csv')
 
     # リアルタイム株価データを取得
-    ts = TimeSeries(key=ALPHA_API_KEY, output_format='pandas')
-    data, meta_data = ts.get_quote_endpoint(symbol=ticker)
+    max_retries = 2
+    retries = 0
+    while retries < max_retries:
+        if current_price_no_error == False:
+            is_Alpha_Vantage = False
 
-    # 現在の価格を表示
-    current_price = float(data['05. price'].iloc[0])
-
-    if is_write_csv:
-        if os.path.exists(file_path):
-            # 既存のCSVを読み込む
-            existing_df = pd.read_csv(file_path, encoding='shift_jis', on_bad_lines='skip')
-            
-            # 「Ticker」をインデックスに設定
-            existing_df.set_index('Ticker', inplace=True)
-            
-            if ticker in existing_df.index:
-                # Tickerが存在する場合、現在の株価を更新
-                existing_df.at[ticker, '現在の株価'] = current_price
+        try:
+            if is_Alpha_Vantage:
+                ts = TimeSeries(key=ALPHA_API_KEY, output_format='pandas')
+                data, meta_data = ts.get_quote_endpoint(symbol=ticker)
+                # 現在の価格を表示
+                current_price = float(data['05. price'].iloc[0])
+                break
             else:
-                # Tickerが存在しない場合、新しい行を追加
-                new_row = pd.DataFrame({
-                    'Ticker': [ticker],
-                    '現在の株価': [current_price]
-                }).set_index('Ticker')
-                existing_df = pd.concat([existing_df, new_row])
+                yfTicker = yf.Ticker(ticker)
+                history = yfTicker.history(period="1d", interval="1m")
+                current_price = history['Close'].iloc[-1]  # 最新の価格を取得
+                break
+        except:
+            retries += 1
+            current_price_no_error = False
+            time.sleep(3)
 
-            # CSVを保存
-            existing_df.reset_index().to_csv(file_path, index=False, encoding='shift_jis', errors='replace')
-            print(f"Updated CSV: {file_path}")
+    if os.path.exists(file_path):
+        # 既存のCSVを読み込む
+        existing_df = pd.read_csv(file_path, encoding='shift_jis', on_bad_lines='skip')
+        
+        # 「Ticker」をインデックスに設定
+        existing_df.set_index('Ticker', inplace=True)
+        
+        if ticker in existing_df.index:
+            # Tickerが存在する場合、現在の株価を更新
+            existing_df.at[ticker, '現在の株価'] = current_price
         else:
-            print(f"File {file_path} does not exist. Please create it first.")
+            # Tickerが存在しない場合、新しい行を追加
+            new_row = pd.DataFrame({
+                'Ticker': [ticker],
+                '現在の株価': [current_price]
+            }).set_index('Ticker')
+            existing_df = pd.concat([existing_df, new_row])
+
+        # CSVを保存
+        existing_df.reset_index().to_csv(file_path, index=False, encoding='shift_jis', errors='replace')
+        print(f"Updated CSV: {ticker}: {current_price}")
+    else:
+        print(f"File {file_path} does not exist. Please create it first.")
 
 def sample(tickers):
     get_current_price_multi(tickers)
