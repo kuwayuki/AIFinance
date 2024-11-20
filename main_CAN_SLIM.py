@@ -112,8 +112,8 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
             else:
                 utils.output_log(f"評価が低いので確認しません。")
             # print(f"{ticker} の買い価格: {buy_price}, 売り価格: {sell_price}")
-        except:
-            print('error')
+        except Exception as e:
+            print(e)
 
         finally:
             utils.output_log(f"\n★★★{ticker} End★★★")
