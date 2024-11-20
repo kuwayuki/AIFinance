@@ -19,13 +19,13 @@ folder_path = ''
 is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
 WATCH_COUNT = 3
 TIME_MINUTE = 120
-TIME_MINUTE_INIT = 30
+TIME_MINUTE_INIT = 10
 
 def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = True):
     global folder_path
 
     utils.move_bkup_folder()
-    utils.set_Sheet_name(tickers)
+    is_usa = utils.set_Sheet_name(tickers)
 
     # 1. CAN-SLIM法で選定された銘柄を配列指定
     # can_slim_tickers = filter_can_slim(tickers)
@@ -56,7 +56,7 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
             future_arrays = [item[0] for item in spread_arrays if item[0] in mark_arrays]
 
             # CSVの現在価格のみ更新
-            utils.get_current_price_multi(future_arrays)
+            utils.get_current_price_multi(future_arrays, is_usa)
             # スプレッドシートデータ更新
             utils.g_spread_write_data_multi(future_arrays)
             # 倍率の厳密チェック

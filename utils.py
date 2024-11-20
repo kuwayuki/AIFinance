@@ -1514,6 +1514,8 @@ def set_Sheet_name(tickers):
     global SHEET_NAME
     if all(ticker.endswith('.T') for ticker in tickers):
         SHEET_NAME = "AI SEED JAPAN"
+        return False
+    return True
 
 def ensure_t_suffix(tickers):
     result = []
@@ -1524,10 +1526,10 @@ def ensure_t_suffix(tickers):
             result.append(ticker)
     return result
 
-def get_current_price_multi(tickers):
+def get_current_price_multi(tickers, is_Alpha_Vantage = True):
     for ticker in tickers:
         try:
-            get_current_price(ticker)
+            get_current_price(ticker, is_Alpha_Vantage)
         except ValueError as e:
             print(e)
             return False
