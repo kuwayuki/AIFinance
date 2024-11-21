@@ -57,7 +57,8 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
             future_tickers = [item[0] for item in spread_arrays if item[0] in mark_tickers]
 
             # CSVの現在価格のみ更新
-            utils.get_current_price_multi(future_tickers, is_usa)
+            utils.get_current_price_multi(future_tickers, False)
+            # utils.get_current_price_multi(future_tickers, is_usa)
             # スプレッドシートデータ更新
             utils.g_spread_write_data_multi(future_tickers)
             # 倍率の厳密チェック
