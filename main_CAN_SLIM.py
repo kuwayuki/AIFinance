@@ -12,13 +12,13 @@ import output_csv
 from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
 # 複数ティッカーをカンマ区切りで受け取り、空白を削除し大文字に変換
-tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['NFLX']
+tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['9697.T']
 tickers = utils.ensure_t_suffix(tickers)
 
 folder_path = ''
 is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
-WATCH_COUNT = 3
-TIME_MINUTE = 120
+WATCH_COUNT = 6
+TIME_MINUTE = 60
 TIME_MINUTE_INIT = 10
 
 def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = True):
@@ -43,6 +43,7 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
         # マークがついているもののみ全て評価
         mark_arrays = utils.g_spread_notice()
+        mark_tickers = [item[0] for item in mark_arrays]
 
         for i in range(WATCH_COUNT):
             print(f"{i+1}回目の実行")
@@ -53,12 +54,12 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
             # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
             spread_arrays = utils.g_spread_notice(False)
-            future_arrays = [item[0] for item in spread_arrays if item[0] in mark_arrays]
+            future_tickers = [item[0] for item in spread_arrays if item[0] in mark_tickers]
 
             # CSVの現在価格のみ更新
-            utils.get_current_price_multi(future_arrays, is_usa)
+            utils.get_current_price_multi(future_tickers, is_usa)
             # スプレッドシートデータ更新
-            utils.g_spread_write_data_multi(future_arrays)
+            utils.g_spread_write_data_multi(future_tickers)
             # 倍率の厳密チェック
             utils.g_spread_notice(is_buy=True)
 
@@ -99,7 +100,7 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
             utils.set_output_log_file_path(ticker, 'can_slim', True)
             utils.analyst_eval_send(ticker, is_write_g_spread)
 
-            utils.output_log(f"\n★★★{ticker} Start★★★")
+            utils.output_log(f"\n{ticker} Start")
 
             score, failed_conditions = utils.filter_can_slim(ticker)
             if score > 2:
@@ -116,7 +117,7 @@ def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = Fals
             print(e)
 
         finally:
-            utils.output_log(f"\n★★★{ticker} End★★★")
+            utils.output_log(f"\n{ticker} End")
             utils.set_output_log_file_path(is_clear=True)
 
 if __name__ == "__main__":

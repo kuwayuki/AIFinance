@@ -741,37 +741,41 @@ def filter_can_slim(ticker, is_send_news = False):
     else:
         output_log(f"C：四半期EPSデータがありません。Reported EPSデータを代用します。")
         # Reported EPSデータを代用
-        earnings_data = tickerInfo.earnings_dates
-        if earnings_data is not None:
-            # Reported EPS から有効な四半期EPSデータを取得
-            reported_eps = earnings_data.get('Reported EPS', {})
-            current_time = pd.Timestamp.now().tz_localize(None)  # 現在のタイムスタンプをtz-naiveに変換
-            quarterly_eps = {k: v for k, v in reported_eps.items() if not pd.isna(v) and pd.to_datetime(k).tz_localize(None) < current_time}
-            sorted_eps = dict(sorted(quarterly_eps.items(), key=lambda x: pd.to_datetime(x[0]).tz_localize(None)))
+        try:
+            earnings_data = tickerInfo.earnings_dates
+            if earnings_data is not None:
+                # Reported EPS から有効な四半期EPSデータを取得
+                reported_eps = earnings_data.get('Reported EPS', {})
+                current_time = pd.Timestamp.now().tz_localize(None)  # 現在のタイムスタンプをtz-naiveに変換
+                quarterly_eps = {k: v for k, v in reported_eps.items() if not pd.isna(v) and pd.to_datetime(k).tz_localize(None) < current_time}
+                sorted_eps = dict(sorted(quarterly_eps.items(), key=lambda x: pd.to_datetime(x[0]).tz_localize(None)))
 
-            if len(sorted_eps) >= 2:
-                eps_values = list(sorted_eps.values())
-                quarterly_growth_count = 0
-                latest_growth_rate = None
-                for i in range(1, len(eps_values)):
-                    growth_rate = (eps_values[i] - eps_values[i-1]) / abs(eps_values[i-1]) * 100
-                    if growth_rate > eps_under:
-                        quarterly_growth_count += 1
-                    if i == len(eps_values) - 1:
-                        latest_growth_rate = growth_rate
-                
-                if latest_growth_rate is not None and latest_growth_rate > eps_under:  # 直近の成長も含めて評価
-                # if latest_growth_rate is not None and latest_growth_rate > eps_under and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
-                    output_log(f"C：◎四半期EPS成長率が{eps_under}%以上を超えています。直近は{latest_growth_rate}%でした。")
-                    score += 1
+                if len(sorted_eps) >= 2:
+                    eps_values = list(sorted_eps.values())
+                    quarterly_growth_count = 0
+                    latest_growth_rate = None
+                    for i in range(1, len(eps_values)):
+                        growth_rate = (eps_values[i] - eps_values[i-1]) / abs(eps_values[i-1]) * 100
+                        if growth_rate > eps_under:
+                            quarterly_growth_count += 1
+                        if i == len(eps_values) - 1:
+                            latest_growth_rate = growth_rate
+                    
+                    if latest_growth_rate is not None and latest_growth_rate > eps_under:  # 直近の成長も含めて評価
+                    # if latest_growth_rate is not None and latest_growth_rate > eps_under and quarterly_growth_count >= 2:  # 直近の成長も含めて評価
+                        output_log(f"C：◎四半期EPS成長率が{eps_under}%以上を超えています。直近は{latest_growth_rate}%でした。")
+                        score += 1
+                    else:
+                        output_log(f"C：四半期EPS成長率が{eps_under}%以上の期間が足りませんでした。直近は{latest_growth_rate}%でした。")
+                        failed_conditions += 1
                 else:
-                    output_log(f"C：四半期EPS成長率が{eps_under}%以上の期間が足りませんでした。直近は{latest_growth_rate}%でした。")
+                    output_log(f"C：有効な四半期EPSデータが不足しています。")
                     failed_conditions += 1
             else:
-                output_log(f"C：有効な四半期EPSデータが不足しています。")
+                output_log(f"C：四半期EPSデータがありません。")
                 failed_conditions += 1
-        else:
-            output_log(f"C：四半期EPSデータがありません。")
+        except:
+            output_log(f"C：例外エラー")
             failed_conditions += 1
 
     # A (Annual Earnings Increases): 年間EPSの成長を確認
@@ -944,7 +948,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
     # データ取得
     recommendations = get_data_with_retry(lambda: etf.recommendations)
     recommendations_summary = get_data_with_retry(lambda: etf.recommendations_summary)
-    earnings_dates = get_data_with_retry(lambda: etf.earnings_dates)
+    earnings_dates = get_data_with_retry(lambda: etf.earnings_dates, 1, 1)
     analyst_price_targets = get_data_with_retry(lambda: etf.analyst_price_targets)
     revenue_estimate = get_data_with_retry(lambda: etf.revenue_estimate)
     earnings_estimate = get_data_with_retry(lambda: etf.earnings_estimate)
@@ -1394,6 +1398,9 @@ def g_spread_notice(is_line = True, is_buy = False):
         buy_num = 1.0
 
     for row in range(len(a_values)):
+        if len(a_values[row]) == 0:
+            continue
+
         meet_sell_condition = (
             (
                 len(ab_values[row]) > 0 and
@@ -1433,12 +1440,15 @@ def g_spread_notice(is_line = True, is_buy = False):
         # result_text = "\n".join([f"{item[0]}, {item[1]}, {item[2]}" for item in results])
         buy_text = '◇買い\n'
         sell_text = '◇売り\n'
-        for item in results:
-            if item[2] != 'NaN' and item[2] != '★NaN':
-                buy_text += f"{item[0]}: {item[2]}({item[1]})\n"
-            if item[3] != 'NaN' and item[3] != '★NaN':
-                sell_text += f"{item[0]}: {item[3]}({item[1]})\n"
-        send_line_notify(f"{buy_text}\n{sell_text}")
+        if len(results):
+            for item in results:
+                if item[2] != 'NaN' and item[2] != '★NaN':
+                    buy_text += f"{item[0]}: {item[2]}({item[1]})\n"
+                if item[3] != 'NaN' and item[3] != '★NaN':
+                    sell_text += f"{item[0]}: {item[3]}({item[1]})\n"
+            send_line_notify(f"\n{buy_text}\n{sell_text}")
+        else:
+            send_line_notify(f"該当なし")
 
     return results
 
@@ -1490,7 +1500,7 @@ def analyst_eval_send(ticker, is_write_g_spread = False):
     ticker_eval = analyst_eval(ticker, is_write_g_spread)
     eval_clean = re.sub(r'[\*\#\_]+', '', ticker_eval)
     output_log(eval_clean, tmp_file_path = get_output_log_file_path(ticker, 'eval', True))
-    send_line_notify(f"\n★★★{ticker}★★★\n" + eval_clean)
+    send_line_notify(f"\n{ticker}\n" + eval_clean)
 
     if is_write_g_spread:
         array_values = get_last_line_of_multiline_string(eval_clean)
