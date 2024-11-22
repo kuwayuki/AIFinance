@@ -16,12 +16,13 @@ tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(s
 tickers = utils.ensure_t_suffix(tickers)
 
 folder_path = ''
-is_future = sys.argv[2] != '' if len(sys.argv) > 2 else False # 未来予測も確認
+is_notice = sys.argv[2] != '' if len(sys.argv) > 2 else len(tickers) > 1
+is_future = sys.argv[3] != '' if len(sys.argv) > 3 else False # 未来予測も確認
 WATCH_COUNT = 6
 TIME_MINUTE = 60
 TIME_MINUTE_INIT = 10
 
-def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = True):
+def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = is_notice):
     global folder_path
 
     utils.move_bkup_folder()

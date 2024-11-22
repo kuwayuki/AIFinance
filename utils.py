@@ -987,7 +987,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
     prompt = PROMPT_USER["ANALYST_EVAL"].format(
         ticker=ticker,
         analyst=combined_info,
-        current_date=datetime.now(),
+        current_date=datetime.now().strftime("%Y%m%d"),
         have_finance_info=have_finance_info,
         news=news_summary,
         last_arrays=last_arrays,
@@ -1443,12 +1443,13 @@ def g_spread_notice(is_line = True, is_buy = False):
         if len(results):
             for item in results:
                 if item[2] != 'NaN' and item[2] != '★NaN':
-                    buy_text += f"{item[0]}: {item[2]}({item[1]})\n"
+                    buy_text += f"{item[0]}: {item[2]} [{item[1]}]\n"
                 if item[3] != 'NaN' and item[3] != '★NaN':
-                    sell_text += f"{item[0]}: {item[3]}({item[1]})\n"
+                    sell_text += f"{item[0]}: {item[3]} [{item[1]}]\n"
             send_line_notify(f"\n{buy_text}\n{sell_text}")
         else:
-            send_line_notify(f"該当なし")
+            # send_line_notify(f"該当なし")
+            print(f"該当なし")
 
     return results
 
