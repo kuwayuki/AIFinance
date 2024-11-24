@@ -776,7 +776,7 @@ def filter_can_slim(ticker, is_send_news = False):
                 failed_conditions += 1
         except:
             output_log(f"C：例外エラー")
-            failed_conditions += 1
+            # failed_conditions += 1
 
     # A (Annual Earnings Increases): 年間EPSの成長を確認
     income_statement = tickerInfo.income_stmt

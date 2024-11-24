@@ -12,7 +12,7 @@ import output_csv
 from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
 # 複数ティッカーをカンマ区切りで受け取り、空白を削除し大文字に変換
-tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['9697.T']
+tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['AAPL', 'NVDA']
 tickers = utils.ensure_t_suffix(tickers)
 
 folder_path = ''
@@ -44,7 +44,7 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
         # マークがついているもののみ全て評価
         mark_arrays = utils.g_spread_notice()
-        mark_tickers = [item[0] for item in mark_arrays]
+        mark_tickers = [item[0] for item in mark_arrays if item[0] in tickers]
 
         for i in range(WATCH_COUNT):
             print(f"{i+1}回目の実行")
