@@ -12,7 +12,7 @@ import output_csv
 from prompts import PROMPT_CAN_SLIM_SYSTEM, PROMPT_CAN_SLIM_USER
 
 # 複数ティッカーをカンマ区切りで受け取り、空白を削除し大文字に変換
-tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['AAPL', 'NVDA']
+tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(sys.argv) > 1 else ['NVDA']
 tickers = utils.ensure_t_suffix(tickers)
 
 folder_path = ''

@@ -111,7 +111,6 @@ def future(ticker, is_include_history_data = False, is_grow = False, file_path =
         news=utils.read_news_from_csv('./csv/news_data.csv'),
         research=utils.read_news_from_csv(file_path, 'shift_jis', csv_ticer),
     )
-    print(prompt)
     # return prompt
     ai_opinion = utils.get_ai_opinion(prompt, prompt_system)
     ai_opinion_cleaned = re.sub(r'[\*\#\_]+', '', ai_opinion)

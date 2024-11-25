@@ -265,8 +265,9 @@ def data_filter_index(data, days=None):
 
 # AIの意見を取得
 def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE, is_print = True, temperature = 0.01):
+    print(prompt)
     # gpt-4o-2024-08-06 or o1-preview
-    if GPT_MODEL != "o1-preview":
+    if not GPT_MODEL.startswith("o1-"):
         if prompt_system is not None:
             response = openai.chat.completions.create(
                 model=GPT_MODEL,
@@ -967,14 +968,25 @@ def analyst_eval(ticker, is_write_g_spread = False):
         news_summary += get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"])
 
     # 各情報を文字列に変換して結合
-    combined_info = f"Recommendations: {recommendations}\n" \
-                    f"Recommendations Summary: {recommendations_summary}\n" \
-                    f"Earnings Dates: {earnings_dates}\n" \
-                    f"Analyst Price Targets: {analyst_price_targets}\n" \
-                    f"Revenue Estimate: {revenue_estimate}\n" \
-                    f"Earnings Estimate: {earnings_estimate}\n" \
-                    f"EPS Trend: {eps_trend}"
-                    # f"Upgrades Downgrades: {upgrades_downgrades}\n" \
+    info_list = []
+    if recommendations:
+        info_list.append(f"Recommendations: {recommendations}")
+    if recommendations_summary and recommendations_summary != recommendations:
+        info_list.append(f"Recommendations Summary: {recommendations_summary}")
+    if earnings_dates:
+        info_list.append(f"Earnings Dates: {earnings_dates}")
+    if analyst_price_targets:
+        info_list.append(f"Analyst Price Targets: {analyst_price_targets}")
+    if revenue_estimate:
+        info_list.append(f"Revenue Estimate: {revenue_estimate}")
+    if earnings_estimate:
+        info_list.append(f"Earnings Estimate: {earnings_estimate}")
+    if eps_trend:
+        info_list.append(f"EPS Trend: {eps_trend}")
+    # if upgrades_downgrades:
+    #     info_list.append(f"Upgrades Downgrades: {upgrades_downgrades}")
+
+    combined_info = '\n'.join(info_list)
 
     have_finance_info = ""
     have_finance=read_news_from_csv('./csv/IHaveFinance.csv', 'shift_jis', ticker)
@@ -982,7 +994,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
         have_finance_info = f"現在の株の保有数は下記です。全てあるいは部分的に売る必要があるときは教えてください。\n{have_finance}"
     last_arrays = ""
     if is_write_g_spread:
-        last_arrays = "最後の行に各結果を文字列配列のみ、要素も値のみ(上昇率%は不要)で記載して下さい。5~7は価格、確率、時期の3つずつなので14個の配列になります"
+        last_arrays = "最後の行に、各結果を値のみの配列で記載してください。5～7は価格、確率、時期の3つずつなので、合計14個の要素となります。"
 
     prompt = PROMPT_USER["ANALYST_EVAL"].format(
         ticker=ticker,
@@ -992,7 +1004,6 @@ def analyst_eval(ticker, is_write_g_spread = False):
         news=news_summary,
         last_arrays=last_arrays,
     )
-    print(prompt)
     response = get_ai_opinion(prompt, None, temperature=0)
     return response
 
