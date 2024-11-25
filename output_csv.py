@@ -4,6 +4,7 @@ import sys
 from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
+import utils
 import json
 
 # デフォルトのティッカーシンボルのリスト
@@ -312,6 +313,7 @@ def calculate_piotroski_score(ticker):
     stock = yf.Ticker(ticker)
     score = 0
     data = {}
+    data['更新日'] = datetime.now().strftime("%Y%m%d")
     try:
         # 財務諸表を取得
         income_statement = stock.financials
@@ -547,7 +549,8 @@ def save_etf_data(ticker, file_path, include_canslim_data=False, include_investm
             'PEGレシオ',
             'ROIC',
             '利益利回り',
-            'Fスコア'
+            'Fスコア',
+            '更新日'
         ]
         columns_order.extend(investment_columns)
 
@@ -577,6 +580,9 @@ def save_etf_data(ticker, file_path, include_canslim_data=False, include_investm
 # メイン処理
 def mains(tickers, file_path = os.path.join(f'./csv/', 'research.csv')):
     for ticker in tickers:
+        if utils.read_ticker_csv(ticker):
+            continue
+
         main(ticker, file_path)
 
 def main(ticker, file_path = os.path.join(f'./csv/', 'research.csv')):

@@ -475,7 +475,20 @@ def get_news_all_relations(soup):
     
     return news_all_relations
 
-def read_news_from_csv(file_path, encoding='utf-8', ticker=None):
+def read_ticker_csv(ticker, file_path = os.path.join(f'./csv/', 'research.csv'), encoding='shift_jis'):
+    try:
+        today_date = datetime.now().strftime("%Y%m%d")
+        with open(file_path, mode='r', encoding=encoding) as file:
+            reader = list(csv.reader(file))  # 全行をリストとして読み込む
+            headers = reader[0]
+            update_date_index = headers.index('更新日')
+            for row in reversed(reader[1:]):  # データ行を逆順に処理
+                if row[0] == ticker:
+                    return row[update_date_index] == today_date
+    except Exception as e:
+        print(f"Error reading CSV file: {e}")
+
+def read_news_from_csv(file_path = os.path.join(f'./csv/', 'research.csv'), encoding='utf-8', ticker=None):
     news_list = []
     try:
         with open(file_path, mode='r', encoding=encoding) as file:
@@ -1610,8 +1623,7 @@ def get_current_price(ticker, is_Alpha_Vantage = True):
         print(f"File {file_path} does not exist. Please create it first.")
 
 def sample(tickers):
-    get_current_price_multi(tickers)
-    g_spread_write_data_multi(tickers)
+    print(read_ticker_csv(tickers[0]))
     # print(get_last_line_of_multiline_string("aaaa\naaa\naaa\n8, 7, 8, 71.16, 75.00, 60, 2024/11/28, 85.00, 50, 2025/02/01, 90.00, 40, 2025/05/01, 66.00"))
     # g_spread_write(ticker, ["ABC", "DEF"])
     # print(finnhub_client.fund_ownership(ticker, limit=5))
