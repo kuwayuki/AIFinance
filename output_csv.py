@@ -581,6 +581,7 @@ def save_etf_data(ticker, file_path, include_canslim_data=False, include_investm
 def mains(tickers, file_path = os.path.join(f'./csv/', 'research.csv')):
     for ticker in tickers:
         if utils.read_ticker_csv(ticker):
+            print(f"{ticker}のyfinance取得はスキップします。")
             continue
 
         main(ticker, file_path)
