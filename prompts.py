@@ -17,7 +17,7 @@ PROMPT_USER = {
     "ANALYST_EVAL": """
     下記は{ticker}のアナリストの評価データです。
     客観的に評価し、以下の1～8について将来の株価情報を教えてください。
-    ただし、Analyst Price Targetsはトレンド次第で除外してください。
+    ただし、Analyst Price Targetsはニュースのトレンド次第で除外してください。
 
     {analyst}
 

@@ -313,7 +313,7 @@ def calculate_piotroski_score(ticker):
     stock = yf.Ticker(ticker)
     score = 0
     data = {}
-    data['更新日'] = datetime.now().strftime("%Y%m%d")
+    data['更新日'] = datetime.now().strftime("%Y-%m-%d")
     try:
         # 財務諸表を取得
         income_statement = stock.financials

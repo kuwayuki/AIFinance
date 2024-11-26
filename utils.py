@@ -477,7 +477,7 @@ def get_news_all_relations(soup):
 
 def read_ticker_csv(ticker, file_path = os.path.join(f'./csv/', 'research.csv'), encoding='shift_jis'):
     try:
-        today_date = datetime.now().strftime("%Y%m%d")
+        today_date = datetime.now().strftime("%Y-%m-%d")
         with open(file_path, mode='r', encoding=encoding) as file:
             reader = list(csv.reader(file))  # 全行をリストとして読み込む
             headers = reader[0]
@@ -982,6 +982,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
 
     # 各情報を文字列に変換して結合
     info_list = []
+    info_list.append(f"アナリスト評価と財務予測の概要データ")
     if recommendations:
         info_list.append(f"Recommendations: {recommendations}")
     if recommendations_summary and recommendations_summary != recommendations:
@@ -1007,7 +1008,7 @@ def analyst_eval(ticker, is_write_g_spread = False):
         have_finance_info = f"現在の株の保有数は下記です。全てあるいは部分的に売る必要があるときは教えてください。\n{have_finance}"
     last_arrays = ""
     if is_write_g_spread:
-        last_arrays = "最後の行に、各結果を値のみの配列で記載してください。5～7は価格、確率、時期の3つずつなので、合計14個の要素となります。"
+        last_arrays = "最後の行に、各結果を値のみの文字列配列のみ記載してください。5～7は価格、確率、時期の3つずつなので、合計14個の要素となります。"
 
     prompt = PROMPT_USER["ANALYST_EVAL"].format(
         ticker=ticker,
