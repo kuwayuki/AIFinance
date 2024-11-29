@@ -38,7 +38,7 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
     utils.g_spread_copy_columns()
 
-    if is_notice_quick:
+    if is_notice_quick and utils.is_in_time_range(is_usa):
         # CSVデータをスプレッドシートにコピー
         # utils.g_spread_write_data_multi(tickers)
 

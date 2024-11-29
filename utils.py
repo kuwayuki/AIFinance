@@ -1577,6 +1577,23 @@ def get_current_price_multi(tickers, is_Alpha_Vantage = True):
             return False
     return True
 
+def is_in_time_range(is_usa):
+    current_time = datetime.now().time()
+    # is_usa の場合: 22:00 - 06:30
+    usa_start_time = datetime.strptime("22:00", "%H:%M").time()
+    usa_end_time = datetime.strptime("06:30", "%H:%M").time()
+
+    # is_usa が False の場合: 08:00 - 15:30
+    local_start_time = datetime.strptime("08:00", "%H:%M").time()
+    local_end_time = datetime.strptime("15:30", "%H:%M").time()
+
+    # 時間範囲のチェック
+    is_in_time_range = (
+        (is_usa and (current_time >= usa_start_time or current_time < usa_end_time)) or
+        (not is_usa and (local_start_time <= current_time < local_end_time))
+    )
+    return is_in_time_range
+
 def get_current_price(ticker, is_Alpha_Vantage = True):
     global current_price_no_error
     file_path = os.path.join(f'./csv/', 'research.csv')
