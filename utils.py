@@ -1276,6 +1276,9 @@ def g_spread_read():
 def g_spread_write(ticker, arrays):
     print("スプレッドシートに記載します。")
     arrays = [str(value).replace('%', '') if isinstance(value, str) and '%' in value else value for value in arrays]
+    if len(arrays) != 14:
+        print("配列数が一致しないので更新しません")
+        return
     print(arrays)
     worksheet = g_spread_read_worksheet()
     # C列（3列目）を全て取得して、tickerの行を検索
@@ -1510,8 +1513,11 @@ def get_last_line_of_multiline_string(input_string):
     # 最終行から3行を順にチェック
     for i in range(1, num_lines_to_check + 1):
         line = lines[-i]
-        if any(char in line for char in "[]"):
-            return line
+        # 余分なプレフィックスを削除し、`[]`内の部分だけを抽出
+        if '[' in line and ']' in line:
+            start_idx = line.find('[')
+            end_idx = line.find(']') + 1
+            return line[start_idx:end_idx]
         elif any(char in line for char in "/"):
             elements = line.split(", ")
             # 各要素が既に文字列でない場合（つまり、数値など）であればダブルクォーテーションで囲む
