@@ -16,13 +16,23 @@ tickers = [ticker.strip().upper() for ticker in sys.argv[1].split(',')] if len(s
 tickers = utils.ensure_t_suffix(tickers)
 
 folder_path = ''
-is_notice = sys.argv[2] != '' if len(sys.argv) > 2 else len(tickers) > 1
-is_future = sys.argv[3] != '' if len(sys.argv) > 3 else False # 未来予測も確認
+is_future = sys.argv[2] != '' if len(sys.argv) > 3 else False # 未来予測も確認
 WATCH_COUNT = 6
 TIME_MINUTE = 60
 TIME_MINUTE_INIT = 10
 
-def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True, is_notice_quick = is_notice):
+START_TIME_USA = (23, 30)
+START_TIME_JAPAN = (9, 0)
+
+def should_run_now(is_usa):
+    now = datetime.now()
+    current_time = (now.hour, now.minute)
+    if is_usa:
+        return current_time <= START_TIME_USA
+    else:
+        return current_time <= START_TIME_JAPAN
+
+def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = True):
     global folder_path
 
     utils.move_bkup_folder()
@@ -38,7 +48,8 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
 
     utils.g_spread_copy_columns()
 
-    if is_notice_quick and utils.is_in_time_range(is_usa):
+    # アメリカは22:00-06:30、日本は08:00-15:30以外は監視しない
+    if utils.is_in_time_range(is_usa):
         # CSVデータをスプレッドシートにコピー
         # utils.g_spread_write_data_multi(tickers)
 
@@ -49,9 +60,12 @@ def main(tickers, is_output_all_info = False, is_send_line = False, is_write_g_s
         for i in range(WATCH_COUNT):
             print(f"{i+1}回目の実行")
 
+            # 初回は開始時間になるまで待機
             if i == 0:
-                print(f"{TIME_MINUTE_INIT}分待機中...")
-                time.sleep(TIME_MINUTE_INIT * 60) 
+                # 指定された時間になるまで待機
+                while should_run_now(is_usa):
+                    print("指定された時刻ではないため待機中...")
+                    time.sleep(180)  # 3分待機
 
             # マークがついているものから直近で動きがありそうなもののみ、一定時間実行
             spread_arrays = utils.g_spread_notice(False)
