@@ -718,6 +718,9 @@ def get_data_with_retry(fetch_function, retries=3, wait=10):
             data = fetch_function()
             if data is not None:
                 return convert_dict(data)
+            else:
+                print(f"none data Retrying {attempts + 1}/{retries}...")
+                attempts += 1
         except Exception as e:
             print(f"Error fetching data: {e}. Retrying {attempts + 1}/{retries}...")
             attempts += 1
