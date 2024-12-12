@@ -633,31 +633,32 @@ def all_print(ticker):
     # jsonOutput(software_ticker.history(), "関係AA基本情報（会社名、業界、株価など）")
 
     # 基本情報
-    jsonOutput(etf.info, "基本情報（会社名、業界、株価など）")
+    jsonOutput(etf.info, "info: 基本情報（会社名、業界、株価など）")
     
     # 財務諸表
-    jsonOutput(etf.financials, "財務諸表")
-    jsonOutput(etf.balance_sheet, "バランスシート")
-    jsonOutput(etf.cashflow, "キャッシュフロー")
-    jsonOutput(etf.earnings, "収益情報")
+    jsonOutput(etf.financials, "financials: 財務諸表")
+    jsonOutput(etf.quarterly_financials, "quarterly_financials: 4半期データ")
+    jsonOutput(etf.balance_sheet, "balance_sheet: バランスシート")
+    jsonOutput(etf.cashflow, "cashflow: キャッシュフロー")
+    jsonOutput(etf.earnings, "earnings: 収益情報")
     
     # 配当金と株式分割
-    jsonOutput(etf.dividends, "配当金情報")
-    jsonOutput(etf.splits, "株式分割情報")
+    jsonOutput(etf.dividends, "dividends: 配当金情報")
+    jsonOutput(etf.splits, "splits: 株式分割情報")
     
     # サステナビリティ
-    jsonOutput(etf.sustainability, "サステナビリティスコア")
+    jsonOutput(etf.sustainability, "sustainability: サステナビリティスコア")
     
     # 推奨情報
-    jsonOutput(etf.recommendations, "アナリスト推奨")
-    jsonOutput(etf.recommendations_summary, "推奨サマリー")
-    jsonOutput(etf.upgrades_downgrades, "アップグレード/ダウングレード情報")
+    jsonOutput(etf.recommendations, "recommendations: アナリスト推奨")
+    jsonOutput(etf.recommendations_summary, "recommendations_summary: 推奨サマリー")
+    jsonOutput(etf.upgrades_downgrades, "upgrades_downgrades: アップグレード/ダウングレード情報")
     
     # 会社の予定
-    output_log(etf.calendar, title="会社の予定（カレンダー）")
+    output_log(etf.calendar, title="calendar: 会社の予定（カレンダー）")
 
     # 株式保有情報
-    jsonOutput(etf.major_holders, "主要株主")
+    jsonOutput(etf.major_holders, "major_holders: 主要株主")
 
     max_retries = 3
     retries = 0
@@ -665,7 +666,7 @@ def all_print(ticker):
         try: 
             institutional_holders = etf.institutional_holders
             if institutional_holders is not None and not institutional_holders.empty:
-                output_log(institutional_holders, title="機関投資家の保有株")
+                output_log(institutional_holders, title="institutional_holders: 機関投資家の保有株")
                 break
         except Exception as e:
             retries += 1
@@ -676,39 +677,40 @@ def all_print(ticker):
         try: 
             mutualfund_holders = etf.mutualfund_holders
             if mutualfund_holders is not None and not mutualfund_holders.empty:
-                output_log(mutualfund_holders, title="投資信託保有者")
+                output_log(mutualfund_holders, title="mutualfund_holders: 投資信託保有者")
                 break
         except Exception as e:
             retries += 1
             time.sleep(2)  # 2秒待ってから再試行
     
     # ニュース
-    jsonOutput(etf.news, "最新ニュース")
+    jsonOutput(etf.news, "news: 最新ニュース")
     
     # オプション
-    jsonOutput(etf.options, "オプションの有効期限")
+    jsonOutput(etf.options, "options: オプションの有効期限")
     
     # 追加の情報
-    jsonOutput(etf.earnings_dates, "収益日")
-    jsonOutput(etf.history_metadata, "履歴メタデータ")
-    jsonOutput(etf.analyst_price_targets, "アナリスト価格目標")
-    jsonOutput(etf.revenue_estimate, "収益見積もり")
-    jsonOutput(etf.earnings_estimate, "収益予測")
-    jsonOutput(etf.eps_trend, "収益トレンド")
+    jsonOutput(etf.quarterly_earnings, "quarterly_earnings: 4半期収益")
+    jsonOutput(etf.earnings_dates, "earnings_dates: 収益日")
+    jsonOutput(etf.history_metadata, "history_metadata: 履歴メタデータ")
+    jsonOutput(etf.analyst_price_targets, "analyst_price_targets: アナリスト価格目標")
+    jsonOutput(etf.revenue_estimate, "revenue_estimate: 収益見積もり")
+    jsonOutput(etf.earnings_estimate, "earnings_estimate: 収益予測")
+    jsonOutput(etf.eps_trend, "eps_trend: 収益トレンド")
 
     # インサイダー取引情報
-    output_log(etf.insider_purchases, title="インサイダーの株式購入情報")
-    output_log(etf.insider_transactions, title="インサイダー取引情報")
-    output_log(etf.insider_roster_holders, title="インサイダーホルダー")
+    output_log(etf.insider_purchases, title="insider_purchases: インサイダーの株式購入情報")
+    output_log(etf.insider_transactions, title="insider_transactions: インサイダー取引情報")
+    output_log(etf.insider_roster_holders, title="insider_roster_holders: インサイダーホルダー")
     
     # キャピタルゲイン情報
-    output_log(etf.capital_gains, title="キャピタルゲイン情報")
+    output_log(etf.capital_gains, title="capital_gains: キャピタルゲイン情報")
     
     # 株式アクション（配当・分割など）
-    jsonOutput(etf.actions, "株式アクション情報（配当・分割など）")
+    jsonOutput(etf.actions, "actions: 株式アクション情報（配当・分割など）")
     
     # ISIN情報
-    jsonOutput(etf.isin, "国際証券識別番号（ISIN）")
+    jsonOutput(etf.isin, "isin: 国際証券識別番号（ISIN）")
 
 # データ取得の再試行設定
 def get_data_with_retry(fetch_function, retries=3, wait=10):
@@ -1648,6 +1650,190 @@ def get_current_price(ticker, is_Alpha_Vantage = True):
         print(f"Updated CSV: {ticker}: {current_price}")
     else:
         print(f"File {file_path} does not exist. Please create it first.")
+
+def shikiho(ticker):
+    ticker_info = yf.Ticker(ticker)
+    results = {}
+
+    # 1. 今期が上方修正している
+    upgrades_downgrades = ticker_info.upgrades_downgrades
+    if upgrades_downgrades is not None and not upgrades_downgrades.empty:
+        is_upgraded = (upgrades_downgrades['Action'] == 'Upgrade').any()
+        results['is_upgraded'] = is_upgraded
+        print(f"今期が上方修正している: {is_upgraded}")
+    else:
+        results['is_upgraded'] = False
+        print("今期が上方修正している: データなし")
+
+    # 2. 四半期進捗率が過去3期平均と比べて5%以上上昇
+    quarterly_financials = ticker_info.quarterly_financials
+    if quarterly_financials is not None and not quarterly_financials.empty:
+        try:
+            if 'Total Revenue' in quarterly_financials.index:
+                latest_revenue = quarterly_financials.loc['Total Revenue'].iloc[0]
+                previous_revenues = quarterly_financials.loc['Total Revenue'].iloc[1:4]
+                past_average = previous_revenues.mean()
+                progress_rate = ((latest_revenue - past_average) / past_average) * 100
+                results['quarterly_progress'] = progress_rate > 5
+                print(f"四半期進捗率: {progress_rate:.2f}% (過去3期: {previous_revenues.values.tolist()}, 最新: {latest_revenue})")
+            else:
+                results['quarterly_progress'] = None
+                print("四半期進捗率: 'Total Revenue' データなし")
+        except Exception as e:
+            results['quarterly_progress'] = None
+            print(f"四半期進捗率: 計算エラー - {e}")
+    else:
+        results['quarterly_progress'] = None
+        print("四半期進捗率: データなし")
+
+    # 3. 売上高が今期から3年間で増加し、直近の増加率が15%以上
+    try:
+        if quarterly_financials is not None and not quarterly_financials.empty and 'Total Revenue' in quarterly_financials.index:
+            recent_revenue_growth = (quarterly_financials.loc['Total Revenue'].iloc[0] - 
+                                     quarterly_financials.loc['Total Revenue'].iloc[1]) / \
+                                     quarterly_financials.loc['Total Revenue'].iloc[1] * 100
+            results['revenue_growth'] = recent_revenue_growth > 15
+            print(f"直近売上高増加率: {recent_revenue_growth:.2f}%")
+        else:
+            results['revenue_growth'] = None
+            print("直近売上高増加率: データなし")
+    except Exception as e:
+        results['revenue_growth'] = None
+        print(f"直近売上高増加率: 計算エラー - {e}")
+
+    # 4. ROEが8%以上
+    roe = ticker_info.info.get('returnOnEquity')
+    results['ROE'] = roe and roe > 0.08
+    print(f"ROE: {roe if roe else 'データなし'}")
+
+    # 5. ROAが5%以上 or 自己資本比率が30%以上
+    balance_sheet = ticker_info.balance_sheet
+    total_equity = None
+    total_assets = None
+
+    if balance_sheet is not None and not balance_sheet.empty:
+        try:
+            if 'Total Stockholder Equity' in balance_sheet.index:
+                total_equity = balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+            elif 'Total Equity Gross Minority Interest' in balance_sheet.index:
+                total_equity = balance_sheet.loc['Total Equity Gross Minority Interest'].iloc[0]
+
+            if 'Total Assets' in balance_sheet.index:
+                total_assets = balance_sheet.loc['Total Assets'].iloc[0]
+        except KeyError as e:
+            print(f"バランスシートのキーエラー: {e}")
+
+    roa = ticker_info.info.get('returnOnAssets')
+    equity_ratio = (total_equity / total_assets) if total_equity and total_assets else None
+    results['ROA_or_equity_ratio'] = (roa and roa > 0.05) or (equity_ratio and equity_ratio > 0.3)
+    print(f"ROA: {roa if roa else 'データなし'}, 自己資本比率: {equity_ratio if equity_ratio else 'データなし'}")
+
+    # 6. 今年度の全体利益予想から今期より前の実績値を引き、今期が他の期よりも低くない
+    try:
+        earnings_estimate = ticker_info.earnings_estimate
+        shares_outstanding = ticker_info.info.get('sharesOutstanding')
+
+        if earnings_estimate is not None and 'avg' in earnings_estimate and '0y' in earnings_estimate['avg']:
+            annual_avg_eps = earnings_estimate['avg']['0y']  # 1株あたり利益
+            print(f"年間利益予想 (1株あたり): {annual_avg_eps}")
+
+            if shares_outstanding:
+                total_annual_profit = annual_avg_eps * shares_outstanding
+                print(f"年間利益予想 (全体): {total_annual_profit}")
+            else:
+                print("発行済み株式数が取得できません。")
+
+            if quarterly_financials is not None and 'Net Income' in quarterly_financials.index:
+                # 四半期データを日付型に変換
+                quarterly_eps = quarterly_financials.loc['Net Income']
+                quarterly_eps.index = pd.to_datetime(quarterly_eps.index)
+
+                # 今日の日付から今年度の範囲を計算（春開始：5月1日～翌年4月30日）
+                today = datetime.today()
+                if today.month < 5:  # 年の前半（1月～4月）は前年5月から今年4月
+                    fiscal_start = pd.Timestamp(year=today.year - 1, month=5, day=1)
+                    fiscal_end = pd.Timestamp(year=today.year, month=4, day=30)
+                else:  # 年の後半（5月～12月）は今年5月から翌年4月
+                    fiscal_start = pd.Timestamp(year=today.year, month=5, day=1)
+                    fiscal_end = pd.Timestamp(year=today.year + 1, month=4, day=30)
+
+                print(f"今年度の範囲: {fiscal_start.date()} ～ {fiscal_end.date()}")
+
+                # フィルタリング
+                quarterly_eps_filtered = quarterly_eps[
+                    (quarterly_eps.index >= fiscal_start) & (quarterly_eps.index <= fiscal_end)
+                ]
+
+                # データが1期のみの場合はスキップ
+                if len(quarterly_eps_filtered) <= 1:
+                    print("データが1期のみのためスキップします。")
+                    results['current_and_future_growth'] = None
+                else:
+                    # 並び替え（5月開始順）
+                    quarterly_eps_sorted = quarterly_eps_filtered.sort_index(key=lambda x: (x.month - 5) % 12)
+
+                    print("並び替え後の四半期データ:")
+                    for date, value in quarterly_eps_sorted.items():
+                        print(f"  {date.date()}: {value}")
+
+                    # 今年度の全体合計を計算
+                    full_year_sum = quarterly_eps_sorted.sum()
+
+                    # 今期以降の利益予想を計算
+                    past_quarters_sum = quarterly_eps_sorted.iloc[:-1].sum() if len(quarterly_eps_sorted) > 1 else 0
+                    current_and_future_quarters = total_annual_profit - past_quarters_sum
+
+                    print(f"今年度四半期実績合計: {full_year_sum}")
+                    print(f"今期以降の利益予想: {current_and_future_quarters}")
+
+                    # 今期以降の利益予想が増加しているか
+                    results['current_and_future_growth'] = current_and_future_quarters > past_quarters_sum
+            else:
+                results['current_and_future_growth'] = None
+                print("残り利益予想: 四半期データ不足")
+        else:
+            results['current_and_future_growth'] = None
+            print("残り利益予想: 年間EPS予想データなし")
+    except Exception as e:
+        results['current_and_future_growth'] = None
+        print(f"残り利益予想: 計算エラー - {e}")
+
+    # 7. 今期が純利益 < 営業CF
+    cashflow = ticker_info.cashflow
+    try:
+        if quarterly_financials is not None and not quarterly_financials.empty and 'Net Income' in quarterly_financials.index:
+            net_income = quarterly_financials.loc['Net Income'].iloc[0]
+            if cashflow is not None and not cashflow.empty and 'Operating Cash Flow' in cashflow.index:
+                operating_cf = cashflow.loc['Operating Cash Flow'].iloc[0]
+                results['net_income_vs_cf'] = net_income < operating_cf
+                print(f"純利益:\n  {net_income}\n営業CF:\n  {operating_cf}")
+            else:
+                results['net_income_vs_cf'] = None
+                print("純利益と営業CF: 'Operating Cash Flow' データなし")
+        else:
+            results['net_income_vs_cf'] = None
+            print("純利益と営業CF: 'Net Income' データなし")
+    except Exception as e:
+        results['net_income_vs_cf'] = None
+        print(f"純利益と営業CF: 計算エラー - {e}")
+
+    # 8. 最高純益が1年以内
+    try:
+        if quarterly_financials is not None and not quarterly_financials.empty and 'Net Income' in quarterly_financials.index:
+            recent_max_net_income = quarterly_financials.loc['Net Income'].iloc[:4].max()
+            recent_max_date = quarterly_financials.loc['Net Income'].iloc[:4].idxmax()
+            highest_net_income = quarterly_financials.loc['Net Income'].max()
+            highest_date = quarterly_financials.loc['Net Income'].idxmax()
+            results['recent_max_net_income'] = recent_max_net_income == highest_net_income
+            print(f"直近最高純益:\n  {recent_max_net_income} ({recent_max_date})\n全体最高純益:\n  {highest_net_income} ({highest_date})")
+        else:
+            results['recent_max_net_income'] = None
+            print("最高純益: 'Net Income' データなし")
+    except Exception as e:
+        results['recent_max_net_income'] = None
+        print(f"最高純益: 計算エラー - {e}")
+
+    return results
 
 def sample(tickers):
     print(read_ticker_csv(tickers[0]))
