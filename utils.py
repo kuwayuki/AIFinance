@@ -1238,23 +1238,27 @@ def g_spread_read_worksheet():
     
     credentials = None
 
-    # 認証情報をロードまたは作成
-    if os.path.exists(AUTHORIZED_USER_FILE):
-        # 保存済みの認証情報をロード
-        credentials = Credentials.from_authorized_user_file(AUTHORIZED_USER_FILE)
-        if credentials.expired:
-            try:
-                # リフレッシュトークンでアクセストークンを更新
-                credentials.refresh(Request())
-            except Exception as e:
-                print(f"Error refreshing token: {e}")
-                credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
-    else:
-        # 初回認証フローを実行
-        credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
+    # # 認証情報をロードまたは作成
+    # if os.path.exists(AUTHORIZED_USER_FILE):
+    #     # 保存済みの認証情報をロード
+    #     credentials = Credentials.from_authorized_user_file(AUTHORIZED_USER_FILE)
+    #     if credentials.expired:
+    #         try:
+    #             # リフレッシュトークンでアクセストークンを更新
+    #             credentials.refresh(Request())
+    #         except Exception as e:
+    #             print(f"Error refreshing token: {e}")
+    #             credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
+    # else:
+    #     # 初回認証フローを実行
+    #     credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
 
     # Google Sheets API に接続
-    gc = gspread.authorize(credentials)
+    gc = gspread.oauth(
+                   credentials_filename=os.path.join(f'./config/', "client_secret.json"), # 認証用のJSONファイル
+                   authorized_user_filename=os.path.join(f'./config/', "authorized_user.json"), # 証明書の出力ファイル
+                   )
+    # gc = gspread.authorize(credentials)
     sh = gc.open_by_key(SHEET_KEY)
     worksheet = sh.worksheet(SHEET_NAME)
     return worksheet
