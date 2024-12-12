@@ -1245,7 +1245,7 @@ def g_spread_read_worksheet():
                 # リフレッシュトークンでアクセストークンを更新
                 credentials.refresh(Request())
             except Exception as e:
-                print("Error refreshing credentials. Starting authentication flow...")
+                print(f"Error refreshing token: {e}")
                 credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
     else:
         # 初回認証フローを実行
