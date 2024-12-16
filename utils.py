@@ -1655,6 +1655,63 @@ def get_current_price(ticker, is_Alpha_Vantage = True):
     else:
         print(f"File {file_path} does not exist. Please create it first.")
 
+# スクレーピングサンプル
+def scraping_sample():
+    # scraping(url = "https://b.hatena.ne.jp/hotentry/it", class_name="entrylist-issue-list-item", attributes=["href", "title"])
+    scraping(url = "https://b.hatena.ne.jp/hotentry/it", class_name="entrylist-issue-list-item", attributes=["href", "title"])
+
+# スクレイピング関数
+def scraping(url, tag_name="a", class_name=None, attributes=None):
+    """
+    汎用的なスクレーピング関数。指定されたタグ、クラス名、属性を抽出する。
+
+    Args:
+        url (str): 対象のURL。
+        tag_name (str): 抽出するHTMLタグ名 (デフォルトは "a")。
+        class_name (str): 抽出するHTML要素のクラス名 (デフォルトは None)。
+        attributes (list): 抽出する属性名のリスト (デフォルトは None)。
+
+    Returns:
+        list[dict]: テキストと指定された属性を含む辞書のリスト。
+    """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # ステータスコードが200以外の場合、例外を発生させる
+    except requests.RequestException as e:
+        print(f"リクエストエラー: {e}")
+        return []
+
+    # HTML解析
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # 指定タグとクラス名の要素を抽出
+    elements = soup.find_all(tag_name, class_=class_name)
+    result = []
+
+    for element in elements:
+        # テキストを取得
+        text = element.get_text(strip=True)
+
+        # 指定された属性の値を辞書形式で取得
+        attr_values = {}
+        if attributes:
+            for attr in attributes:
+                if text == element.get(attr):
+                    continue
+                attr_values[attr] = element.get(attr)
+
+        # 結果を辞書形式で保存
+        result.append({
+            "text": text,
+            "attributes": attr_values
+        })
+
+    return result
+
 def shikiho(ticker):
     ticker_info = yf.Ticker(ticker)
     results = {}
@@ -1840,7 +1897,7 @@ def shikiho(ticker):
     return results
 
 def sample(tickers):
-    print(read_ticker_csv(tickers[0]))
+    print(scraping_sample())
     # print(get_last_line_of_multiline_string("aaaa\naaa\naaa\n8, 7, 8, 71.16, 75.00, 60, 2024/11/28, 85.00, 50, 2025/02/01, 90.00, 40, 2025/05/01, 66.00"))
     # g_spread_write(ticker, ["ABC", "DEF"])
     # print(finnhub_client.fund_ownership(ticker, limit=5))
