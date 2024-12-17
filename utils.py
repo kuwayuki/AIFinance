@@ -1657,8 +1657,24 @@ def get_current_price(ticker, is_Alpha_Vantage = True):
 
 # スクレーピングサンプル
 def scraping_sample():
+    # はてぶ
     # scraping(url = "https://b.hatena.ne.jp/hotentry/it", class_name="entrylist-issue-list-item", attributes=["href", "title"])
-    scraping(url = "https://b.hatena.ne.jp/hotentry/it", class_name="entrylist-issue-list-item", attributes=["href", "title"])
+    # IT関連：37ページ
+    # url = "https://kabutan.jp/themes/?theme=IT%E9%96%A2%E9%80%A3&market=0&capitalization=-1&stc=&stm=0&page={{page}}"
+    # 人工知能：23ページ
+    url = "https://kabutan.jp/themes/?theme=%E4%BA%BA%E5%B7%A5%E7%9F%A5%E8%83%BD&market=0&capitalization=-1&stc=&stm=0&page={{page}}"
+    data = scrape_multiple_pages(
+        base_url=url,
+        page_count=23,  # ページ数を指定
+        container_selector="table.stock_table.st_market tr",
+        item_selectors={
+            "Ticker": "td:nth-child(1) a",
+            "Name": "td:nth-child(2)",
+            "Market": "td:nth-child(3)"
+        },
+        add_suffix={"Ticker": ".T"}  # 日本株のティッカーには .T を追加
+    )
+    print(data)
 
 # スクレイピング関数
 def scraping(url, tag_name="a", class_name=None, attributes=None):
@@ -1709,6 +1725,54 @@ def scraping(url, tag_name="a", class_name=None, attributes=None):
             "text": text,
             "attributes": attr_values
         })
+
+    return result
+
+def scrape_multiple_pages(base_url, page_count, container_selector, item_selectors, add_suffix=None):
+    all_results = []
+    for page in range(1, page_count + 1):
+        url = base_url.replace("{{page}}", str(page))
+        print(f"Scraping page: {url}")
+        page_data = generic_scraping(url, container_selector, item_selectors, add_suffix)
+        all_results.extend(page_data)
+    return all_results
+
+def generic_scraping(url, container_selector, item_selectors, add_suffix=None):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"リクエストエラー: {e}")
+        return []
+
+    # HTML解析
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # コンテナ取得
+    containers = soup.select(container_selector)
+    if not containers:
+        print(f"指定されたセレクタ '{container_selector}' に該当する要素が見つかりませんでした。")
+        return []
+
+    result = []
+
+    for container in containers:
+        item_data = {}
+        for key, selector in item_selectors.items():
+            element = container.select_one(selector)
+            if element:
+                text = element.get_text(strip=True)
+                # サフィックスの追加処理
+                if add_suffix and key in add_suffix:
+                    text += add_suffix[key]
+                item_data[key] = text
+            else:
+                item_data[key] = None  # 該当要素がない場合
+        result.append(item_data)
 
     return result
 
