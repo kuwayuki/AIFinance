@@ -841,13 +841,13 @@ def filter_can_slim(ticker, is_send_news = False):
     news = tickerInfo.news
     if news is not None:
         new_product_or_management = False
-        recent_weeks = pd.Timestamp.now() - pd.Timedelta(weeks=2)
+        recent_weeks = pd.Timestamp.now().tz_localize(None) - pd.Timedelta(weeks=2)
         news_list = []
         news_link_list = []
         for item in news:
-            news_date = pd.to_datetime(item['providerPublishTime'], unit='s')
+            news_date = pd.to_datetime(item['content']['pubDate']).tz_localize(None)
             if news_date > recent_weeks:
-                news = f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}"
+                news = f"{pd.to_datetime(item['content']['pubDate']).strftime('%Y-%m-%d')}: {item['content']['title']}"
                 news_list.append(news)
                 news_link_list.append(item['link'])
                 new_product_or_management = True
@@ -975,12 +975,12 @@ def analyst_eval(ticker, is_write_g_spread = False):
     news = etf.news
     news_summary = ""
     if news is not None:
-        recent_weeks = pd.Timestamp.now() - pd.Timedelta(weeks=2)
+        recent_weeks = pd.Timestamp.now().tz_localize(None) - pd.Timedelta(weeks=2)
         news_list = []
         for item in news:
-            news_date = pd.to_datetime(item['providerPublishTime'], unit='s')
+            news_date = pd.to_datetime(item['content']['pubDate']).tz_localize(None)
             if news_date > recent_weeks:
-                news = f"{pd.to_datetime(item['providerPublishTime'], unit='s').strftime('%Y-%m-%d')}: {item['title']}"
+                news = f"{pd.to_datetime(item['content']['pubDate']).strftime('%Y-%m-%d')}: {item['content']['title']}"
                 news_list.append(news)
         news_summary = f"最近のニュースは下記です。良いニュースと悪いニュースは4~7の「価格」に影響します。\n"
         news_summary += get_ai_opinion("\n".join(news_list), PROMPT_SYSTEM["JAPANESE_SUMMARY_ARRAY"])
@@ -1238,27 +1238,27 @@ def g_spread_read_worksheet():
     
     credentials = None
 
-    # # 認証情報をロードまたは作成
-    # if os.path.exists(AUTHORIZED_USER_FILE):
-    #     # 保存済みの認証情報をロード
-    #     credentials = Credentials.from_authorized_user_file(AUTHORIZED_USER_FILE)
-    #     if credentials.expired:
-    #         try:
-    #             # リフレッシュトークンでアクセストークンを更新
-    #             credentials.refresh(Request())
-    #         except Exception as e:
-    #             print(f"Error refreshing token: {e}")
-    #             credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
-    # else:
-    #     # 初回認証フローを実行
-    #     credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
+    # 認証情報をロードまたは作成
+    if os.path.exists(AUTHORIZED_USER_FILE):
+        # 保存済みの認証情報をロード
+        credentials = Credentials.from_authorized_user_file(AUTHORIZED_USER_FILE)
+        if credentials.expired:
+            try:
+                # リフレッシュトークンでアクセストークンを更新
+                credentials.refresh(Request())
+            except Exception as e:
+                print(f"Error refreshing token: {e}")
+                credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
+    else:
+        # 初回認証フローを実行
+        credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
+    gc = gspread.authorize(credentials)
 
     # Google Sheets API に接続
-    gc = gspread.oauth(
-                   credentials_filename=os.path.join(f'./config/', "client_secret.json"), # 認証用のJSONファイル
-                   authorized_user_filename=os.path.join(f'./config/', "authorized_user.json"), # 証明書の出力ファイル
-                   )
-    # gc = gspread.authorize(credentials)
+    # gc = gspread.oauth(
+    #                credentials_filename=os.path.join(f'./config/', "client_secret.json"), # 認証用のJSONファイル
+    #                authorized_user_filename=os.path.join(f'./config/', "authorized_user.json"), # 証明書の出力ファイル
+    #                )
     sh = gc.open_by_key(SHEET_KEY)
     worksheet = sh.worksheet(SHEET_NAME)
     return worksheet

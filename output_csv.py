@@ -460,10 +460,21 @@ def save_etf_data(ticker, file_path, include_canslim_data=False, include_investm
 
     # ニュースを取得
     news_items = etf.news
-    if news_items:
-        news_str = ";".join([news_item['title'].replace(",", " ").replace("—", "-").replace("\u2013", " ").replace("\xa0", " ").replace("\xae", " ").replace("\u014c", " ").replace("\u2122", " ").replace('\u02bb', " ") for news_item in news_items])
+    if news_items and isinstance(news_items, list):  # ニュースがリストであることを確認
+        cleaned_titles = []
+        for news_item in news_items:
+            # 各ニュースアイテムが辞書であり、'title'キーが存在することを確認
+            if isinstance(news_item, dict) and 'title' in news_item:
+                title = news_item['title']
+                # タイトルが文字列である場合のみ処理
+                if isinstance(title, str):
+                    cleaned_title = title.replace(",", " ").replace("—", "-").replace("\u2013", " ").replace("\xa0", " ").replace("\xae", " ").replace("\u014c", " ").replace("\u2122", " ").replace('\u02bb', " ")
+                    cleaned_titles.append(cleaned_title)
+        # クリーンなタイトルをセミコロンで結合
+        news_str = ";".join(cleaned_titles) if cleaned_titles else "N/A"
         data['ニュース'] = news_str
     else:
+        # ニュースが空または適切な形式でない場合
         data['ニュース'] = "N/A"
 
     # アナリスト評価を取得
