@@ -267,7 +267,7 @@ def data_filter_index(data, days=None):
 def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE, is_print = True, temperature = 0.01):
     print(prompt)
     # gpt-4o-2024-08-06 or o1-preview
-    if not GPT_MODEL.startswith("o1-"):
+    if not GPT_MODEL.startswith("o"):
         if prompt_system is not None:
             response = openai.chat.completions.create(
                 model=GPT_MODEL,
