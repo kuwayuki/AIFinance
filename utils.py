@@ -1246,6 +1246,9 @@ def g_spread_read_worksheet():
             try:
                 # リフレッシュトークンでアクセストークンを更新
                 credentials.refresh(Request())
+
+                with open(AUTHORIZED_USER_FILE, 'w') as f:
+                    f.write(credentials.to_json())
             except Exception as e:
                 print(f"Error refreshing token: {e}")
                 credentials = perform_auth_flow(CREDENTIALS_FILE, AUTHORIZED_USER_FILE)
@@ -1269,7 +1272,11 @@ def perform_auth_flow(credentials_file, authorized_user_file):
         credentials_file,
         scopes=["https://www.googleapis.com/auth/spreadsheets"]
     )
-    credentials = flow.run_local_server(port=0)
+    credentials = flow.run_local_server(
+        port=0,
+        access_type='offline',  # リフレッシュトークンを取得するための指定
+        prompt='consent'        # 必要に応じて追加（初回のみの利用を推奨）
+    )
 
     # トークンを保存
     with open(authorized_user_file, 'w') as f:
