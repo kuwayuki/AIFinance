@@ -849,8 +849,19 @@ def filter_can_slim(ticker, is_send_news = False):
             if news_date > recent_weeks:
                 news = f"{pd.to_datetime(item['content']['pubDate']).strftime('%Y-%m-%d')}: {item['content']['title']}"
                 news_list.append(news)
-                news_link_list.append(item['link'])
-                new_product_or_management = True
+            # clickThroughUrl が存在し、かつ辞書型であるかを確認する
+            click_through = item['content'].get('clickThroughUrl')
+            if click_through is not None and isinstance(click_through, dict):
+                url = click_through.get('url', '')
+            else:
+                # clickThroughUrlがNoneまたは辞書型でなければcanonicalUrlを確認する
+                canonical = item['content'].get('canonicalUrl')
+                if canonical is not None and isinstance(canonical, dict):
+                    url = canonical.get('url', '')
+                else:
+                    url = ''
+            news_link_list.append(url)
+            new_product_or_management = True
 
         if new_product_or_management and is_new_news("\n".join(news_list)):
             output_log(f"N：◎新製品または経営の変化に関するニュースが見つかりました")
