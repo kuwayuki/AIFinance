@@ -25,6 +25,7 @@ from scipy.signal import argrelextrema
 import numpy as np
 from yahooquery import Ticker
 from alpha_vantage.timeseries import TimeSeries # pip install alpha-vantage
+from google import genai
 # import finnhub
 # from sec_edgar_downloader import Downloader
  # pip install scipy
@@ -55,6 +56,8 @@ config = load_config()
 tickers = sys.argv[1].split(',') if len(sys.argv) > 1 else ['SMH']  # 複数ティッカーをカンマ区切りで受け取る
 
 API_KEY = config.get("API_KEY", "")
+API_KEY_GEMINI = config.get("API_KEY_GEMINI", "")
+GPT_MODEL_GEMINI = config.get("GPT_MODEL_GEMINI", "")
 openai.api_key = API_KEY
 OSUSUME = config.get("OSUSUME", [])
 IS_COMP = config.get("IS_COMP", False)
@@ -1034,7 +1037,8 @@ def analyst_eval(ticker, is_write_g_spread = False):
         news=news_summary,
         last_arrays=last_arrays,
     )
-    response = get_ai_opinion(prompt, None, temperature=0)
+    response = get_ai_opinion_gemini(prompt)
+    # response = get_ai_opinion(prompt, None, temperature=0)
     return response
 
 def is_new_news(news_list):
@@ -1977,6 +1981,19 @@ def shikiho(ticker):
         print(f"最高純益: 計算エラー - {e}")
 
     return results
+
+
+# AIの意見を取得
+def get_ai_opinion_gemini(prompt, is_print = True):
+    client = genai.Client(api_key=API_KEY_GEMINI)
+    response = client.models.generate_content(
+        model=GPT_MODEL_GEMINI, contents=prompt
+    )
+    print(response.text)
+    result = response.text
+    if is_print:
+        print(result)
+    return result
 
 def sample(tickers):
     print(scraping_sample())

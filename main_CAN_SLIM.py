@@ -95,7 +95,8 @@ def filter_can_slim(tickers):
         # news=utils.read_news_from_csv('./csv/news_data.csv'),
         research=utils.read_news_from_csv(file_path, 'shift_jis', "ALL"),
     )
-    return utils.get_ai_opinion(prompt, PROMPT_CAN_SLIM_SYSTEM)
+    return utils.get_ai_opinion_gemini(prompt)
+    # return utils.get_ai_opinion(prompt, PROMPT_CAN_SLIM_SYSTEM)
 
 def get_buy_sell_prices(tickers, is_output_all_info = False, is_send_line = False, is_write_g_spread = False):
     for ticker in tickers:
