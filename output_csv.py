@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import utils
 import json
+import time
 
 # デフォルトのティッカーシンボルのリスト
 DEFAULT = ["9697.T"]
@@ -595,6 +596,7 @@ def mains(tickers, file_path = os.path.join(f'./csv/', 'research.csv')):
             print(f"{ticker}のyfinance取得はスキップします。")
             continue
 
+        time.sleep(10)
         main(ticker, file_path)
 
 def main(ticker, file_path = os.path.join(f'./csv/', 'research.csv')):
