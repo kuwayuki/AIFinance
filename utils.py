@@ -272,17 +272,17 @@ def get_ai_opinion(prompt, prompt_system = PROMPT_SYSTEM_BASE, is_print = True, 
     # gpt-4o-2024-08-06 or o1-preview
     if not GPT_MODEL.startswith("o"):
         if prompt_system is not None:
-            response = openai.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model=GPT_MODEL,
                 messages=[{"role": "system", "content": prompt_system}, {"role": "user", "content": prompt}],
                 temperature=temperature)
         else:
-            response = openai.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model=GPT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature)
     else:
-        response = openai.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model=GPT_MODEL,
             messages=[{"role": "user", "content": prompt}])
     print(response.usage)
